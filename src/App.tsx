@@ -48,7 +48,7 @@ export default function App() {
           transition={{ delay: 0.3 }}
           className="mt-8 text-2xl font-black tracking-tighter uppercase italic text-primary"
         >
-          Top Lubri <span className="text-white">PRO</span>
+          Top Lubri <span className="text-white">Palmital</span>
         </motion.h1>
       </div>
     );
@@ -78,7 +78,7 @@ export default function App() {
   };
 
   return (
-    <AppLayout activeTab={activeTab} setActiveTab={setActiveTab} title={profile?.companyName || 'Top Lubri PRO'}>
+    <AppLayout activeTab={activeTab} setActiveTab={setActiveTab} title={profile?.companyName || 'Top Lubri Palmital'}>
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}

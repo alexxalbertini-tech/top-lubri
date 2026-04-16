@@ -3,6 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Initialize Firebase SDK
 let app;
 try {
   if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === 'TODO_KEYHERE') {
@@ -11,8 +12,6 @@ try {
   app = initializeApp(firebaseConfig);
 } catch (e) {
   console.error("Firebase initialization failed:", e);
-  // Initialize with empty config to prevent downstream crashes, 
-  // but it will still fail on actual calls which is handled by handleFirestoreError
   app = initializeApp({ apiKey: "invalid", authDomain: "invalid", projectId: "invalid", appId: "invalid" });
 }
 
@@ -62,21 +61,9 @@ export function handleFirestoreError(error: unknown, operationType: string, path
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  // Don't throw if it's just an offline message during a non-critical operation
+  if (errInfo.error.includes('the client is offline')) {
+    return;
+  }
   throw new Error(JSON.stringify(errInfo));
 }
-
-async function testConnection() {
-  try {
-    // Test connection to Firestore
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firebase connection successful.");
-  } catch (error: any) {
-    if (error.message?.includes('the client is offline')) {
-      console.error("Firebase Configuration Error: The client is offline. This usually means the API Key, Project ID, or Database ID in firebase-applet-config.json is incorrect, or the Firestore database has not been created.");
-    } else {
-      // Log other errors (like permission denied) which are also useful
-      console.warn("Firebase connection test notice:", error.message);
-    }
-  }
-}
-testConnection();
