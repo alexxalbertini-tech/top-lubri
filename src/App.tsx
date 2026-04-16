@@ -3,23 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBpIxVgGok4vBbS_P7xX1Gryj-vlzCe0rY",
-  authDomain: "top-lubri.firebaseapp.com",
-  projectId: "top-lubri",
-  storageBucket: "top-lubri.firebasestorage.app",
-  messagingSenderId: "674482884657",
-  appId: "1:674482884657:web:e85c0a065f8be902410510",
-  measurementId: "G-BSMTRN70BJ"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+import React, { useState, useEffect } from 'react';
+import { useAuth } from './hooks/useAuth';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { AppLayout } from './components/layout/AppLayout';
 import { Dashboard } from './components/dashboard/Dashboard';
