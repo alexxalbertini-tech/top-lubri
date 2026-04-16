@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter', sans-serif;
+    --color-primary: #00ff88;
+    --color-primary-foreground: #0b0b0b;
+    --color-background: #0b0b0b;
+    --color-foreground: #ffffff;
+    --color-card: #151515;
+    --color-card-foreground: #ffffff;
+    --color-border: rgba(0, 255, 136, 0.1);
+    --radius: 1.25rem;
+}
+
+:root {
+    --background: #0b0b0b;
+    --foreground: #ffffff;
+    --card: #151515;
+    --card-foreground: #ffffff;
+    --popover: #151515;
+    --popover-foreground: #ffffff;
+    --primary: #00ff88;
+    --primary-foreground: #0b0b0b;
+    --secondary: #1a1a1a;
+    --secondary-foreground: #ffffff;
+    --muted: #1a1a1a;
+    --muted-foreground: #a1a1aa;
+    --accent: #1a1a1a;
+    --accent-foreground: #ffffff;
+    --destructive: #ff4444;
+    --border: rgba(0, 255, 136, 0.1);
+    --input: rgba(0, 255, 136, 0.1);
+    --ring: #00ff88;
+    --radius: 1.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior-y: none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .glow-primary {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+  }
+  .glow-primary-hover:hover {
+    box-shadow: 0 0 25px rgba(0, 255, 136, 0.5);
+  }
+  .glass {
+    background: rgba(21, 21, 21, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}

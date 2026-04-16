@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "companyName": { "type": "string" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Appointment record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "service": { "type": "string" },
+        "laborValue": { "type": "number" },
+        "partsValue": { "type": "number" },
+        "oilValue": { "type": "number" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] }
+      },
+      "required": ["userId", "clientName", "service", "date", "time", "status"]
+    },
+    "ServiceRecord": {
+      "title": "ServiceRecord",
+      "description": "Completed service record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "value": { "type": "number" },
+        "laborValue": { "type": "number" },
+        "partsValue": { "type": "number" },
+        "oilValue": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["Dinheiro", "Pix", "Cartão"] },
+        "date": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["userId", "clientName", "value", "paymentMethod", "date"]
+    },
+    "CashFlowEntry": {
+      "title": "CashFlowEntry",
+      "description": "Financial entry or exit",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["entry", "exit"] },
+        "value": { "type": "number" },
+        "description": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "type", "value", "description", "paymentMethod", "date"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Customer budget record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "vehicle": { "type": "string" },
+        "plate": { "type": "string" },
+        "services": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "value": { "type": "number" }
+            }
+          }
+        },
+        "parts": { "type": "array" },
+        "oil": { "type": "array" },
+        "totalLabor": { "type": "number" },
+        "totalParts": { "type": "number" },
+        "totalOil": { "type": "number" },
+        "totalGeneral": { "type": "number" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "sent", "approved"] }
+      },
+      "required": ["userId", "clientName", "totalGeneral", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/usuarios/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile data"
+    },
+    "/usuarios/{uid}/agendamentos/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "User appointments"
+    },
+    "/usuarios/{uid}/servicos/{serviceId}": {
+      "schema": "ServiceRecord",
+      "description": "User service records"
+    },
+    "/usuarios/{uid}/caixa/{entryId}": {
+      "schema": "CashFlowEntry",
+      "description": "User cash flow entries"
+    },
+    "/usuarios/{uid}/orcamentos/{budgetId}": {
+      "schema": "Budget",
+      "description": "Customer budgets"
+    }
+  }
+}
