@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-export function Appointments() {
+export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,8 +45,11 @@ export function Appointments() {
       toast.success('Agendamento confirmado!', {
         className: "bg-zinc-900 border-primary/50 text-white",
       });
+      
+      // Professional success flow:
       setIsAdding(false);
       resetForm();
+      if (setActiveTab) setActiveTab('dashboard');
     } catch (error) {
       console.error(error);
       toast.error('Erro ao realizar agendamento');
@@ -79,11 +82,12 @@ export function Appointments() {
   const openWhatsApp = (phone: string, name: string, date: string, time: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const dateFormatted = format(new Date(date + 'T00:00:00'), 'dd/MM/yyyy');
-    const text = `--- 🏁 TOP LUBRI - Agendamento 🏁 ---\n\n` +
-                 `📅 *Data:* ${dateFormatted}\n` +
-                 `⏰ *Hora:* ${time}\n` +
-                 `👤 *Cliente:* ${name}\n\n` +
-                 `Confirmamos sua reserva! Nos vemos em breve.`;
+    
+    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+                 `👤 *Cliente:* ${name}\n` +
+                 `📅 *Data do Agendamento:* ${dateFormatted}\n` +
+                 `⏰ *Hora:* ${time}\n\n` +
+                 `✅ Reserva Confirmada com Sucesso! Nos vemos em breve.`;
     
     window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };

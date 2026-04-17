@@ -29,7 +29,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export function Budgets() {
+export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { budgets, addBudget, deleteBudget } = useFirebase();
   const { profile } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
@@ -95,8 +95,11 @@ export function Budgets() {
 
       await addBudget(budgetData);
       toast.success('Orçamento salvo com sucesso!');
+      
+      // Professional success flow:
       setIsAdding(false);
       resetForm();
+      if (setActiveTab) setActiveTab('dashboard');
     } catch (error) {
       console.error(error);
       toast.error('Erro ao salvar orçamento');
@@ -179,12 +182,19 @@ export function Budgets() {
 
   const shareOnWhatsApp = (budget: Budget) => {
     const dateStr = format(new Date(budget.date), 'dd/MM/yyyy');
-    const text = `--- 🏁 TOP LUBRI - Comprovante 🏁 ---\n\n` +
-                 `📅 *Data:* ${dateStr}\n` +
-                 `🚗 *Veículo:* ${budget.vehicle} / ${budget.plate}\n` +
-                 `🛠️ *Serviço:* Orçamento Preventivo\n` +
-                 `💰 *Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
-                 `Obrigado pela preferência!`;
+    
+    // Professional ultra-formatted string
+    const servicesList = budget.services.map(s => `• ${s.description}`).join('\n');
+    const partsList = budget.parts.map(p => `• ${p.description} (x${p.quantity})`).join('\n');
+    
+    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+                 `👤 *Cliente:* ${budget.clientName}\n` +
+                 `🚗 *Veículo:* ${budget.vehicle} / ${budget.plate}\n\n` +
+                 `🛠️ *Serviços/Mão de Obra:*\n${servicesList || 'Nenhum'}\n\n` +
+                 `🧩 *Peças/Materiais:*\n${partsList || 'Nenhum'}\n\n` +
+                 `💰 *Valor Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `📅 *Data:* ${dateStr}\n\n` +
+                 `✅ Serviço Finalizado com Sucesso!`;
     
     const phone = budget.whatsapp.replace(/\D/g, '');
     const url = `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`;

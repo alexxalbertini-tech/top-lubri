@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function Services() {
+export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { services, addService } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,8 +47,11 @@ export function Services() {
       toast.success('Serviço registrado com sucesso!', {
         className: "bg-zinc-900 border-primary/50 text-white",
       });
+      
+      // Professional success flow:
       setIsAdding(false);
       resetForm();
+      if (setActiveTab) setActiveTab('dashboard');
     } catch (error) {
       console.error(error);
       toast.error('Erro ao registrar serviço');

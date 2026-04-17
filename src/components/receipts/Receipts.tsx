@@ -59,15 +59,16 @@ Obrigado pela preferência!
     }
 
     const date = new Date().toLocaleDateString('pt-BR');
-    const text = `*COMPROVANTE - ${profile?.companyName || 'Top Lubri'}*\n\n` +
-                 `📅 *Data:* ${date}\n` +
+    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
                  `👤 *Cliente:* ${clientName}\n` +
-                 `💰 *Valor:* R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-                 `📝 *Descrição:* ${description || 'Serviços de manutenção'}\n\n` +
+                 `💰 *Valor Total:* R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `🛠️ *Serviço/Descrição:*\n${description || 'Manutenção Automotiva'}\n\n` +
+                 `📅 *Data:* ${date}\n\n` +
+                 `✅ Serviço Finalizado com Sucesso!\n` +
                  `Obrigado pela preferência!`;
 
     const phone = whatsapp.replace(/\D/g, '');
-    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
     toast.success('Redirecionando para o WhatsApp...');
   };

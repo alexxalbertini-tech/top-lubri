@@ -66,9 +66,9 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
-      case 'appointments': return <Appointments />;
-      case 'services': return <Services />;
-      case 'budgets': return <Budgets />;
+      case 'appointments': return <Appointments setActiveTab={setActiveTab} />;
+      case 'services': return <Services setActiveTab={setActiveTab} />;
+      case 'budgets': return <Budgets setActiveTab={setActiveTab} />;
       case 'cashflow': return <CashFlow />;
       case 'reports': return <Reports />;
       case 'receipts': return <Receipts />;
