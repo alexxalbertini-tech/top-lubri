@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 
 export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { appointments, addAppointment, updateAppointment, deleteAppointment } = useFirebase();
+  const { appointments, addAppointment, updateAppointment, completeAppointment, deleteAppointment } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -73,9 +73,14 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     setTime('');
   };
 
-  const handleStatus = async (id: string, status: 'completed' | 'cancelled') => {
-    await updateAppointment(id, { status });
-    toast.success(`Status atualizado para ${status === 'completed' ? 'Concluído' : 'Cancelado'}`);
+  const handleStatus = async (app: Appointment, status: 'completed' | 'cancelled') => {
+    if (status === 'completed') {
+      await completeAppointment(app);
+      toast.success('Agendamento concluído e lançado no financeiro!');
+    } else {
+      await updateAppointment(app.id, { status });
+      toast.success('Agendamento cancelado');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -255,7 +260,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                     <PremiumButton 
                       variant="outline" 
                       className="h-12 rounded-xl border-zinc-800 bg-zinc-900/50"
-                      onClick={() => handleStatus(app.id, 'completed')}
+                      onClick={() => handleStatus(app, 'completed')}
                     >
                       <CheckCircle className="w-5 h-5 text-emerald-400" />
                     </PremiumButton>

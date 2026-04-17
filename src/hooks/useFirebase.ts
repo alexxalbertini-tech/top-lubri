@@ -159,6 +159,31 @@ export function useFirebase() {
     }
   };
 
+  const completeAppointment = async (appointment: Appointment) => {
+    if (!user) return;
+    try {
+      // 1. Update status to completed
+      await updateDoc(doc(db, 'usuarios', user.uid, 'agendamentos', appointment.id), { status: 'completed' });
+      
+      // 2. Automatically record in finance (INTEGRAÇÃO FINANCEIRA)
+      const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0);
+      if (totalValue > 0) {
+        await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
+          userId: user.uid,
+          type: 'entry',
+          value: totalValue,
+          description: `Agenda Concluída: ${appointment.clientName} (${appointment.vehicle || 'Geral'})`,
+          paymentMethod: 'Dinheiro', // Default or could be a parameter
+          date: new Date().toISOString().split('T')[0],
+          appointmentId: appointment.id,
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, 'UPDATE', `usuarios/${user.uid}/agendamentos/${appointment.id}`);
+    }
+  };
+
   return {
     appointments,
     services,
@@ -167,6 +192,7 @@ export function useFirebase() {
     loading,
     addAppointment,
     updateAppointment,
+    completeAppointment,
     deleteAppointment,
     addService,
     addCashFlowEntry,
