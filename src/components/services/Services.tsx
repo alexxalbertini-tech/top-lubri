@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFirebase } from '@/hooks/useFirebase';
 import { PremiumCard, PremiumButton } from '@/components/ui/PremiumUI';
-import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Share2 } from 'lucide-react';
+import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Share2, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
   const [vehicle, setVehicle] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
+  const [oilValue, setOilValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Dinheiro' | 'Pix' | 'Cartão'>('Pix');
   const [description, setDescription] = useState('');
 
@@ -29,7 +30,8 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     try {
       const labor = parseFloat(laborValue) || 0;
       const parts = parseFloat(partsValue) || 0;
-      const total = labor + parts;
+      const oil = parseFloat(oilValue) || 0;
+      const total = labor + parts + oil;
 
       if (total <= 0) {
         toast.error('O valor total deve ser maior que zero');
@@ -43,6 +45,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
         value: total,
         laborValue: labor,
         partsValue: parts,
+        oilValue: oil,
         paymentMethod,
         date: new Date().toISOString().split('T')[0],
         description
@@ -64,7 +67,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     }
   };
 
-  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0);
+  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0) + (parseFloat(oilValue) || 0);
 
   const resetForm = () => {
     setClientName('');
@@ -72,6 +75,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     setVehicle('');
     setLaborValue('');
     setPartsValue('');
+    setOilValue('');
     setDescription('');
   };
 
@@ -132,7 +136,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
                       <Wrench className="w-3 h-3 mr-1 text-primary" /> Mão de Obra
@@ -141,9 +145,15 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças/Materiais
+                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças
                     </Label>
                     <Input type="number" value={partsValue} onChange={e => setPartsValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+                      <Droplets className="w-3 h-3 mr-1 text-primary" /> Óleo
+                    </Label>
+                    <Input type="number" value={oilValue} onChange={e => setOilValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                   </div>
                 </div>
 
@@ -213,14 +223,18 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 py-3 border-y border-white/5 mb-3">
+              <div className="grid grid-cols-3 gap-2 py-3 border-y border-white/5 mb-3">
                 <div className="text-center">
                   <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Mão de Obra</p>
                   <p className="text-[10px] font-black">R$ {service.laborValue || 0}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Peças/Materiais</p>
+                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Peças</p>
                   <p className="text-[10px] font-black">R$ {service.partsValue || 0}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Óleo</p>
+                  <p className="text-[10px] font-black">R$ {service.oilValue || 0}</p>
                 </div>
               </div>
 

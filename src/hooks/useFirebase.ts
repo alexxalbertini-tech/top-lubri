@@ -99,12 +99,14 @@ export function useFirebase() {
       // Valor total = Mão de Obra + Peças (Óleo já consolidado em Peças)
       const laborValue = parseFloat(String(data.laborValue)) || 0;
       const partsValue = parseFloat(String(data.partsValue)) || 0;
-      const totalValue = laborValue + partsValue;
+      const oilValue = parseFloat(String(data.oilValue)) || 0;
+      const totalValue = laborValue + partsValue + oilValue;
       
       const serviceData = { 
         ...data, 
         laborValue,
         partsValue,
+        oilValue,
         value: totalValue, 
         userId: user.uid,
         createdAt: new Date().toISOString()
@@ -166,7 +168,7 @@ export function useFirebase() {
       await updateDoc(doc(db, 'usuarios', user.uid, 'agendamentos', appointment.id), { status: 'completed' });
       
       // 2. Automatically record in finance (INTEGRAÇÃO FINANCEIRA)
-      const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0);
+      const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0) + (appointment.oilValue || 0);
       if (totalValue > 0) {
         await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
           userId: user.uid,

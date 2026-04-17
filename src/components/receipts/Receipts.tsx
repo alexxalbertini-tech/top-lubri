@@ -59,12 +59,12 @@ Obrigado pela preferência!
     }
 
     const date = new Date().toLocaleDateString('pt-BR');
-    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+    const text = `🛠️ *ORDEM DE SERVIÇO - TOP LUBRI* 🛠️\n\n` +
                  `👤 *Cliente:* ${clientName}\n` +
                  `💰 *Valor Total:* R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-                 `🛠️ *Serviço/Descrição:*\n${description || 'Manutenção Automotiva'}\n\n` +
+                 `🛠️ *Descrição:*\n${description || 'Manutenção Automotiva'}\n\n` +
                  `📅 *Data:* ${date}\n\n` +
-                 `✅ Serviço Finalizado com Sucesso!\n` +
+                 `✅ *Status:* Serviço Finalizado!\n` +
                  `Obrigado pela preferência!`;
 
     const phone = whatsapp.replace(/\D/g, '');

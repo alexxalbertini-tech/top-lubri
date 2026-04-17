@@ -22,6 +22,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
   const [service, setService] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
+  const [oilValue, setOilValue] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('');
 
@@ -32,6 +33,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     try {
       const labor = parseFloat(laborValue) || 0;
       const parts = parseFloat(partsValue) || 0;
+      const oil = parseFloat(oilValue) || 0;
 
       await addAppointment({
         clientName,
@@ -40,6 +42,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
         service,
         laborValue: labor,
         partsValue: parts,
+        oilValue: oil,
         date,
         time,
         status: 'pending',
@@ -61,7 +64,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     }
   };
 
-  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0);
+  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0) + (parseFloat(oilValue) || 0);
 
   const resetForm = () => {
     setClientName('');
@@ -70,6 +73,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     setService('');
     setLaborValue('');
     setPartsValue('');
+    setOilValue('');
     setTime('');
   };
 
@@ -153,7 +157,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                   <Input value={service} onChange={e => setService(e.target.value)} required className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
                       <Wrench className="w-3 h-3 mr-1 text-primary" /> Mão de Obra
@@ -162,9 +166,15 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças e Materiais
+                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças
                     </Label>
                     <Input type="number" value={partsValue} onChange={e => setPartsValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+                      <Droplets className="w-3 h-3 mr-1 text-primary" /> Óleo
+                    </Label>
+                    <Input type="number" value={oilValue} onChange={e => setOilValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                   </div>
                 </div>
 
@@ -235,7 +245,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-6 text-[11px] font-bold text-zinc-400 mb-6 px-1">
+                  <div className="flex items-center space-x-4 text-[11px] font-bold text-zinc-400 mb-6 px-1">
                     <div className="flex items-center">
                       <CalendarIcon className="w-3.5 h-3.5 mr-1.5 text-primary" />
                       {format(new Date(app.date + 'T00:00:00'), 'dd/MM/yy')}
@@ -245,7 +255,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                       {app.time}
                     </div>
                     <div className="flex items-center text-primary font-black">
-                      Total: R$ {app.laborValue + app.partsValue}
+                      Total: R$ {(app.laborValue || 0) + (app.partsValue || 0) + (app.oilValue || 0)}
                     </div>
                   </div>
 
