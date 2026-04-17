@@ -10,6 +10,7 @@ export interface Appointment {
   userId: string;
   clientName: string;
   whatsapp: string;
+  vehicle?: string;
   service: string;
   laborValue: number;
   partsValue: number;
@@ -22,6 +23,8 @@ export interface ServiceRecord {
   id: string;
   userId: string;
   clientName: string;
+  whatsapp?: string;
+  vehicle?: string;
   value: number;
   laborValue: number;
   partsValue: number;

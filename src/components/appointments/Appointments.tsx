@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { Appointment } from '@/types';
 
 export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useFirebase();
@@ -17,6 +18,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
   // Form state
   const [clientName, setClientName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [vehicle, setVehicle] = useState('');
   const [service, setService] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
@@ -34,6 +36,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
       await addAppointment({
         clientName,
         whatsapp,
+        vehicle,
         service,
         laborValue: labor,
         partsValue: parts,
@@ -63,6 +66,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
   const resetForm = () => {
     setClientName('');
     setWhatsapp('');
+    setVehicle('');
     setService('');
     setLaborValue('');
     setPartsValue('');
@@ -79,15 +83,17 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     toast.error('Agendamento removido');
   };
 
-  const openWhatsApp = (phone: string, name: string, date: string, time: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const dateFormatted = format(new Date(date + 'T00:00:00'), 'dd/MM/yyyy');
+  const openWhatsApp = (app: Appointment) => {
+    const cleanPhone = app.whatsapp.replace(/\D/g, '');
+    const dateFormatted = format(new Date(app.date + 'T00:00:00'), 'dd/MM/yyyy');
     
-    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
-                 `👤 *Cliente:* ${name}\n` +
-                 `📅 *Data do Agendamento:* ${dateFormatted}\n` +
-                 `⏰ *Hora:* ${time}\n\n` +
-                 `✅ Reserva Confirmada com Sucesso! Nos vemos em breve.`;
+    const text = `🛠️ *AGENDAMENTO - TOP LUBRI* 🛠️\n\n` +
+                 `👤 *Cliente:* ${app.clientName}\n` +
+                 `🚗 *Veículo:* ${app.vehicle || 'Não informado'}\n` +
+                 `📅 *Data:* ${dateFormatted}\n` +
+                 `⏰ *Hora:* ${app.time}\n\n` +
+                 `✅ *Status:* Reserva Confirmada!\n` +
+                 `Nos vemos em breve!`;
     
     window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -132,6 +138,10 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">WhatsApp</Label>
                   <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="11999999999" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Veículo</Label>
+                  <Input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Modelo/Placa" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Serviço</Label>
@@ -238,7 +248,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
                     <PremiumButton 
                       variant="outline" 
                       className="h-12 rounded-xl border-zinc-800 bg-zinc-900/50"
-                      onClick={() => openWhatsApp(app.whatsapp, app.clientName, app.date, app.time)}
+                      onClick={() => openWhatsApp(app)}
                     >
                       <MessageCircle className="w-5 h-5 text-primary" />
                     </PremiumButton>

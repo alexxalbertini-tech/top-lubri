@@ -138,26 +138,26 @@ export function AuthScreen() {
           </div>
           
           <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                <Lock className="w-3 h-3 mr-1" /> Senha
-              </Label>
+            <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+              <Lock className="w-3 h-3 mr-1" /> Senha
+            </Label>
+            <div className="relative">
+              <Input 
+                type={showPassword ? "text" : "password"} 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+                placeholder="••••••••"
+                className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12 focus:border-primary/50 pr-10" 
+              />
               <button 
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[9px] uppercase font-black tracking-widest text-primary hover:text-primary/80"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
               >
-                {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <Input 
-              type={showPassword ? "text" : "password"} 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-              placeholder="••••••••"
-              className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12 focus:border-primary/50" 
-            />
           </div>
 
           <div className="flex justify-end">

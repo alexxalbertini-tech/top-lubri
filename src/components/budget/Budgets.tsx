@@ -187,14 +187,13 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     const servicesList = budget.services.map(s => `• ${s.description}`).join('\n');
     const partsList = budget.parts.map(p => `• ${p.description} (x${p.quantity})`).join('\n');
     
-    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+    const text = `🛠️ *ORDEM DE SERVIÇO - TOP LUBRI* 🛠️\n\n` +
                  `👤 *Cliente:* ${budget.clientName}\n` +
-                 `🚗 *Veículo:* ${budget.vehicle} / ${budget.plate}\n\n` +
-                 `🛠️ *Serviços/Mão de Obra:*\n${servicesList || 'Nenhum'}\n\n` +
-                 `🧩 *Peças/Materiais:*\n${partsList || 'Nenhum'}\n\n` +
-                 `💰 *Valor Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `🚗 *Veículo:* ${budget.vehicle || 'Não informado'}\n` +
+                 `💰 *Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
                  `📅 *Data:* ${dateStr}\n\n` +
-                 `✅ Serviço Finalizado com Sucesso!`;
+                 `✅ *Status:* Orçamento Disponível!\n` +
+                 `Obrigado pela preferência!`;
     
     const phone = budget.whatsapp.replace(/\D/g, '');
     const url = `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`;

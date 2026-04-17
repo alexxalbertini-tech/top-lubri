@@ -42,8 +42,7 @@ export function useFirebase() {
 
     const qCashFlow = query(
       collection(db, 'usuarios', user.uid, 'caixa'),
-      orderBy('date', 'desc'),
-      limit(100)
+      orderBy('date', 'desc')
     );
     const unsubscribeCashFlow = onSnapshot(qCashFlow, (snap) => {
       setCashFlow(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CashFlowEntry)));
@@ -119,7 +118,7 @@ export function useFirebase() {
         userId: user.uid,
         type: 'entry',
         value: totalValue,
-        description: `Serviço Realizado: ${data.clientName}`,
+        description: `Serviço: ${data.clientName} (${data.vehicle || 'Geral'})`,
         paymentMethod: data.paymentMethod,
         date: data.date,
         serviceId: serviceRef.id,

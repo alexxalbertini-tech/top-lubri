@@ -15,6 +15,8 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
   // Form state
   const [clientName, setClientName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [vehicle, setVehicle] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Dinheiro' | 'Pix' | 'Cartão'>('Pix');
@@ -36,6 +38,8 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
       await addService({
         clientName,
+        whatsapp,
+        vehicle,
         value: total,
         laborValue: labor,
         partsValue: parts,
@@ -64,18 +68,20 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
   const resetForm = () => {
     setClientName('');
+    setWhatsapp('');
+    setVehicle('');
     setLaborValue('');
     setPartsValue('');
     setDescription('');
   };
 
   const handleShareWhatsApp = (service: any) => {
-    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+    const text = `🛠️ *ORDEM DE SERVIÇO - TOP LUBRI* 🛠️\n\n` +
                  `👤 *Cliente:* ${service.clientName}\n` +
-                 `🛠️ *Serviço:* ${service.description || 'Manutenção Automotiva'}\n` +
-                 `💰 *Valor Total:* R$ ${service.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `🚗 *Veículo:* ${service.vehicle || 'Não informado'}\n` +
+                 `💰 *Total:* R$ ${service.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
                  `📅 *Data:* ${service.date}\n\n` +
-                 `✅ Serviço Finalizado com Sucesso!\n` +
+                 `✅ *Status:* Serviço Finalizado!\n` +
                  `Obrigado pela preferência!`;
 
     const cleanPhone = (service.whatsapp || '').replace(/\D/g, '');
@@ -112,7 +118,18 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
               <form onSubmit={handleAdd} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Cliente</Label>
-                  <Input autoFocus value={clientName} onChange={e => setClientName(e.target.value)} required className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  <Input autoFocus value={clientName} onChange={e => setClientName(e.target.value)} required placeholder="Nome do Cliente" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">WhatsApp</Label>
+                    <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="00999999999" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Veículo</Label>
+                    <Input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Modelo/Placa" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
