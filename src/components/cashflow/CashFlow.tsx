@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 
-export function CashFlow() {
+export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { cashFlow, addCashFlowEntry } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [entryType, setEntryType] = useState<'entry' | 'exit'>('entry');
 
   // Form state
@@ -27,19 +28,30 @@ export function CashFlow() {
       return;
     }
 
-    await addCashFlowEntry({
-      type: entryType,
-      value: val,
-      description,
-      paymentMethod,
-      date: new Date().toISOString().split('T')[0]
-    });
+    setIsSaving(true);
+    try {
+      await addCashFlowEntry({
+        type: entryType,
+        value: val,
+        description,
+        paymentMethod,
+        date: new Date().toISOString().split('T')[0]
+      });
 
-    toast.success(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada!`, {
-      className: "bg-zinc-900 border-primary/50 text-white",
-    });
-    setIsAdding(false);
-    resetForm();
+      toast.success(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada!`, {
+        className: "bg-zinc-900 border-primary/50 text-white",
+      });
+
+      // Professional success flow:
+      setIsAdding(false);
+      resetForm();
+      if (setActiveTab) setActiveTab('dashboard');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao registrar fluxo de caixa');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetForm = () => {
@@ -162,8 +174,8 @@ export function CashFlow() {
                     </SelectContent>
                   </Select>
                 </div>
-                <PremiumButton type="submit" className={cn("w-full mt-4 h-14", entryType === 'exit' && "bg-red-500 hover:bg-red-600")}>
-                  Confirmar {entryType === 'entry' ? 'Recebimento' : 'Pagamento'}
+                <PremiumButton type="submit" disabled={isSaving} className={cn("w-full mt-4 h-14", entryType === 'exit' ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90")}>
+                  {isSaving ? 'Registrando...' : `Confirmar ${entryType === 'entry' ? 'Recebimento' : 'Pagamento'}`}
                 </PremiumButton>
               </form>
             </PremiumCard>

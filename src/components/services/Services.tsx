@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFirebase } from '@/hooks/useFirebase';
 import { PremiumCard, PremiumButton } from '@/components/ui/PremiumUI';
-import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Droplets } from 'lucide-react';
+import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,6 +67,20 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     setLaborValue('');
     setPartsValue('');
     setDescription('');
+  };
+
+  const handleShareWhatsApp = (service: any) => {
+    const text = `📄 ORDEM DE SERVIÇO - TOP LUBRI 📄\n\n` +
+                 `👤 *Cliente:* ${service.clientName}\n` +
+                 `🛠️ *Serviço:* ${service.description || 'Manutenção Automotiva'}\n` +
+                 `💰 *Valor Total:* R$ ${service.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `📅 *Data:* ${service.date}\n\n` +
+                 `✅ Serviço Finalizado com Sucesso!\n` +
+                 `Obrigado pela preferência!`;
+
+    const cleanPhone = (service.whatsapp || '').replace(/\D/g, '');
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -194,10 +208,21 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
               </div>
 
               <div className="flex items-center justify-between">
-                <p className="text-[10px] text-zinc-400 font-medium italic truncate max-w-[200px]">
+                <p className="text-[10px] text-zinc-400 font-medium italic truncate max-w-[150px]">
                   {service.description || 'Sem descrição'}
                 </p>
-                <ChevronRight className="w-4 h-4 text-zinc-700" />
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShareWhatsApp(service);
+                    }}
+                    className="p-2 bg-[#25D366]/10 rounded-lg text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-zinc-700" />
+                </div>
               </div>
             </PremiumCard>
           </div>

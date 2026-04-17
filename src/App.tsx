@@ -24,9 +24,12 @@ export default function App() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsInitialLoading(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    // Splash screen stays for 1.5s or until loading completes, whichever is longer
+    if (!loading) {
+      const timer = setTimeout(() => setIsInitialLoading(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   if (isInitialLoading || loading) {
     return (
@@ -69,7 +72,7 @@ export default function App() {
       case 'appointments': return <Appointments setActiveTab={setActiveTab} />;
       case 'services': return <Services setActiveTab={setActiveTab} />;
       case 'budgets': return <Budgets setActiveTab={setActiveTab} />;
-      case 'cashflow': return <CashFlow />;
+      case 'cashflow': return <CashFlow setActiveTab={setActiveTab} />;
       case 'reports': return <Reports />;
       case 'receipts': return <Receipts />;
       case 'settings': return <Settings />;

@@ -97,23 +97,39 @@ export function useFirebase() {
   const addService = async (data: Omit<ServiceRecord, 'id' | 'userId'>) => {
     if (!user) return;
     try {
-      // Valor total is Labor + Parts (Oil is already in Parts now)
-      const totalValue = (data.laborValue || 0) + (data.partsValue || 0);
-      const serviceData = { ...data, value: totalValue, userId: user.uid };
+      // Valor total = Mão de Obra + Peças (Óleo já consolidado em Peças)
+      const laborValue = parseFloat(String(data.laborValue)) || 0;
+      const partsValue = parseFloat(String(data.partsValue)) || 0;
+      const totalValue = laborValue + partsValue;
       
-      await addDoc(collection(db, 'usuarios', user.uid, 'servicos'), serviceData);
+      const serviceData = { 
+        ...data, 
+        laborValue,
+        partsValue,
+        value: totalValue, 
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      };
       
-      // Also add to cash flow as positive entry
+      // Step 1: Save the service record
+      const serviceRef = await addDoc(collection(db, 'usuarios', user.uid, 'servicos'), serviceData);
+      
+      // Step 2: Automatically record in cash flow (FINANCEIRO INTEGRADO)
       await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
         userId: user.uid,
         type: 'entry',
         value: totalValue,
         description: `Serviço Realizado: ${data.clientName}`,
         paymentMethod: data.paymentMethod,
-        date: data.date
+        date: data.date,
+        serviceId: serviceRef.id,
+        createdAt: new Date().toISOString()
       });
+      
+      return serviceRef;
     } catch (err) {
       handleFirestoreError(err, 'CREATE', `usuarios/${user.uid}/servicos`);
+      throw err;
     }
   };
 
