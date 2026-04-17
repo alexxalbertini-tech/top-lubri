@@ -13,6 +13,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin' || 
+         (request.auth.token.email == "alexx.albertini@gmail.com" && request.auth.token.email_verified == true));
+    }
+
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
@@ -60,36 +66,36 @@ service cloud.firestore {
     // ===============================================================
 
     match /usuarios/{uid} {
-      allow read: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid) && isValidUserProfile(request.resource.data);
-      allow update: if isOwner(uid) && isValidUserProfile(request.resource.data);
+      allow update: if (isOwner(uid) || isAdmin()) && isValidUserProfile(request.resource.data);
 
       match /agendamentos/{id} {
-        allow read: if isOwner(uid);
+        allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid) && isValidAppointment(request.resource.data);
-        allow update: if isOwner(uid) && isValidAppointment(request.resource.data);
-        allow delete: if isOwner(uid);
+        allow update: if (isOwner(uid) || isAdmin()) && isValidAppointment(request.resource.data);
+        allow delete: if isOwner(uid) || isAdmin();
       }
 
       match /servicos/{id} {
-        allow read: if isOwner(uid);
+        allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid) && isValidServiceRecord(request.resource.data);
-        allow update: if isOwner(uid) && isValidServiceRecord(request.resource.data);
-        allow delete: if isOwner(uid);
+        allow update: if (isOwner(uid) || isAdmin()) && isValidServiceRecord(request.resource.data);
+        allow delete: if isOwner(uid) || isAdmin();
       }
 
       match /caixa/{id} {
-        allow read: if isOwner(uid);
+        allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid) && isValidCashFlowEntry(request.resource.data);
-        allow update: if isOwner(uid) && isValidCashFlowEntry(request.resource.data);
-        allow delete: if isOwner(uid);
+        allow update: if (isOwner(uid) || isAdmin()) && isValidCashFlowEntry(request.resource.data);
+        allow delete: if isOwner(uid) || isAdmin();
       }
 
       match /orcamentos/{id} {
-        allow read: if isOwner(uid);
+        allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid) && isValidBudget(request.resource.data);
-        allow update: if isOwner(uid) && isValidBudget(request.resource.data);
-        allow delete: if isOwner(uid);
+        allow update: if (isOwner(uid) || isAdmin()) && isValidBudget(request.resource.data);
+        allow delete: if isOwner(uid) || isAdmin();
       }
     }
   }

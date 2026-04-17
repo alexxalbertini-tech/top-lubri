@@ -23,7 +23,6 @@
         "service": { "type": "string" },
         "laborValue": { "type": "number" },
         "partsValue": { "type": "number" },
-        "oilValue": { "type": "number" },
         "date": { "type": "string" },
         "time": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] }
@@ -40,7 +39,6 @@
         "value": { "type": "number" },
         "laborValue": { "type": "number" },
         "partsValue": { "type": "number" },
-        "oilValue": { "type": "number" },
         "paymentMethod": { "type": "string", "enum": ["Dinheiro", "Pix", "Cartão"] },
         "date": { "type": "string" },
         "description": { "type": "string" }
@@ -82,10 +80,8 @@
           }
         },
         "parts": { "type": "array" },
-        "oil": { "type": "array" },
         "totalLabor": { "type": "number" },
         "totalParts": { "type": "number" },
-        "totalOil": { "type": "number" },
         "totalGeneral": { "type": "number" },
         "date": { "type": "string" },
         "status": { "type": "string", "enum": ["draft", "sent", "approved"] }

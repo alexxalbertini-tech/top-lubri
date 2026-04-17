@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 export function Appointments() {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state
   const [clientName, setClientName] = useState('');
@@ -19,37 +20,42 @@ export function Appointments() {
   const [service, setService] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
-  const [oilValue, setOilValue] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('');
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const labor = parseFloat(laborValue) || 0;
-    const parts = parseFloat(partsValue) || 0;
-    const oil = parseFloat(oilValue) || 0;
+    setIsSaving(true);
+    try {
+      const labor = parseFloat(laborValue) || 0;
+      const parts = parseFloat(partsValue) || 0;
 
-    await addAppointment({
-      clientName,
-      whatsapp,
-      service,
-      laborValue: labor,
-      partsValue: parts,
-      oilValue: oil,
-      date,
-      time,
-      status: 'pending',
-    });
+      await addAppointment({
+        clientName,
+        whatsapp,
+        service,
+        laborValue: labor,
+        partsValue: parts,
+        date,
+        time,
+        status: 'pending',
+      });
 
-    toast.success('Agendamento confirmado!', {
-      className: "bg-zinc-900 border-primary/50 text-white",
-    });
-    setIsAdding(false);
-    resetForm();
+      toast.success('Agendamento confirmado!', {
+        className: "bg-zinc-900 border-primary/50 text-white",
+      });
+      setIsAdding(false);
+      resetForm();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao realizar agendamento');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0) + (parseFloat(oilValue) || 0);
+  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0);
 
   const resetForm = () => {
     setClientName('');
@@ -57,7 +63,6 @@ export function Appointments() {
     setService('');
     setLaborValue('');
     setPartsValue('');
-    setOilValue('');
     setTime('');
   };
 
@@ -73,8 +78,14 @@ export function Appointments() {
 
   const openWhatsApp = (phone: string, name: string, date: string, time: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`Olá ${name}, confirmando seu agendamento na Top Lubri PRO para o dia ${format(new Date(date + 'T00:00:00'), 'dd/MM')} às ${time}.`);
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+    const dateFormatted = format(new Date(date + 'T00:00:00'), 'dd/MM/yyyy');
+    const text = `--- 🏁 TOP LUBRI - Agendamento 🏁 ---\n\n` +
+                 `📅 *Data:* ${dateFormatted}\n` +
+                 `⏰ *Hora:* ${time}\n` +
+                 `👤 *Cliente:* ${name}\n\n` +
+                 `Confirmamos sua reserva! Nos vemos em breve.`;
+    
+    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
@@ -123,7 +134,7 @@ export function Appointments() {
                   <Input value={service} onChange={e => setService(e.target.value)} required className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
                       <Wrench className="w-3 h-3 mr-1 text-primary" /> Mão de Obra
@@ -132,15 +143,9 @@ export function Appointments() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças
+                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças e Materiais
                     </Label>
                     <Input type="number" value={partsValue} onChange={e => setPartsValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Droplets className="w-3 h-3 mr-1 text-primary" /> Óleo
-                    </Label>
-                    <Input type="number" value={oilValue} onChange={e => setOilValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                   </div>
                 </div>
 
@@ -160,7 +165,9 @@ export function Appointments() {
                   <span className="text-xl font-black text-primary tracking-tighter">R$ {currentTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
 
-                <PremiumButton type="submit" className="w-full mt-4 h-14">Confirmar Reserva</PremiumButton>
+                <PremiumButton type="submit" disabled={isSaving} className={cn("w-full mt-4 h-14", isSaving && "opacity-50 cursor-not-allowed")}>
+                  {isSaving ? 'Processando...' : 'Confirmar Reserva'}
+                </PremiumButton>
               </form>
             </PremiumCard>
           </motion.div>
@@ -198,18 +205,14 @@ export function Appointments() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="bg-zinc-900/50 p-2 rounded-lg border border-white/5">
                       <p className="text-[7px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Mão de Obra</p>
                       <p className="text-[10px] font-black text-white">R$ {app.laborValue}</p>
                     </div>
                     <div className="bg-zinc-900/50 p-2 rounded-lg border border-white/5">
-                      <p className="text-[7px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Peças</p>
+                      <p className="text-[7px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Peças/Materiais</p>
                       <p className="text-[10px] font-black text-white">R$ {app.partsValue}</p>
-                    </div>
-                    <div className="bg-zinc-900/50 p-2 rounded-lg border border-white/5">
-                      <p className="text-[7px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Óleo</p>
-                      <p className="text-[10px] font-black text-white">R$ {app.oilValue}</p>
                     </div>
                   </div>
 
@@ -223,7 +226,7 @@ export function Appointments() {
                       {app.time}
                     </div>
                     <div className="flex items-center text-primary font-black">
-                      Total: R$ {app.laborValue + app.partsValue + app.oilValue}
+                      Total: R$ {app.laborValue + app.partsValue}
                     </div>
                   </div>
 

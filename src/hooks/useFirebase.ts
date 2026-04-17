@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy, limit } from 'firebase/firestore';
 import { db, handleFirestoreError } from '../lib/firebase';
 import { useAuth } from './useAuth';
 import { Appointment, ServiceRecord, CashFlowEntry, Budget } from '../types';
@@ -24,7 +24,8 @@ export function useFirebase() {
 
     const qAppointments = query(
       collection(db, 'usuarios', user.uid, 'agendamentos'),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(50)
     );
     const unsubscribeAppointments = onSnapshot(qAppointments, (snap) => {
       setAppointments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
@@ -32,7 +33,8 @@ export function useFirebase() {
 
     const qServices = query(
       collection(db, 'usuarios', user.uid, 'servicos'),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(100)
     );
     const unsubscribeServices = onSnapshot(qServices, (snap) => {
       setServices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord)));
@@ -40,7 +42,8 @@ export function useFirebase() {
 
     const qCashFlow = query(
       collection(db, 'usuarios', user.uid, 'caixa'),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(100)
     );
     const unsubscribeCashFlow = onSnapshot(qCashFlow, (snap) => {
       setCashFlow(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CashFlowEntry)));
@@ -48,7 +51,8 @@ export function useFirebase() {
 
     const qBudgets = query(
       collection(db, 'usuarios', user.uid, 'orcamentos'),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(50)
     );
     const unsubscribeBudgets = onSnapshot(qBudgets, (snap) => {
       setBudgets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
@@ -93,13 +97,18 @@ export function useFirebase() {
   const addService = async (data: Omit<ServiceRecord, 'id' | 'userId'>) => {
     if (!user) return;
     try {
-      await addDoc(collection(db, 'usuarios', user.uid, 'servicos'), { ...data, userId: user.uid });
-      // Also add to cash flow
+      // Valor total is Labor + Parts (Oil is already in Parts now)
+      const totalValue = (data.laborValue || 0) + (data.partsValue || 0);
+      const serviceData = { ...data, value: totalValue, userId: user.uid };
+      
+      await addDoc(collection(db, 'usuarios', user.uid, 'servicos'), serviceData);
+      
+      // Also add to cash flow as positive entry
       await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
         userId: user.uid,
         type: 'entry',
-        value: data.value,
-        description: `Serviço: ${data.clientName}`,
+        value: totalValue,
+        description: `Serviço Realizado: ${data.clientName}`,
         paymentMethod: data.paymentMethod,
         date: data.date
       });

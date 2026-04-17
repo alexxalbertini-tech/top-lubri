@@ -56,15 +56,15 @@ export function Dashboard() {
             <TrendingUp className="w-6 h-6 text-primary" />
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Faturamento Total</p>
+            <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Saldo do Caixa (Total)</p>
             <h3 className="text-3xl font-black tracking-tighter text-white">
-              R$ {cashFlow.filter(e => e.type === 'entry').reduce((acc, curr) => acc + curr.value, 0).toLocaleString()}
+              R$ {cashFlow.reduce((acc, curr) => curr.type === 'entry' ? acc + curr.value : acc - curr.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </h3>
           </div>
         </div>
         <div className="flex items-center space-x-2 text-xs font-bold text-zinc-500">
-          <span className="text-primary">+R$ 1.240</span>
-          <span>nas últimas 24h</span>
+          <span className="text-primary">+R$ {todayRevenue.toLocaleString()}</span>
+          <span>faturado hoje</span>
         </div>
       </PremiumCard>
 

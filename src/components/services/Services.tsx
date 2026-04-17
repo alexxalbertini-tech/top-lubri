@@ -11,53 +11,58 @@ import { motion, AnimatePresence } from 'motion/react';
 export function Services() {
   const { services, addService } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state
   const [clientName, setClientName] = useState('');
   const [laborValue, setLaborValue] = useState('');
   const [partsValue, setPartsValue] = useState('');
-  const [oilValue, setOilValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Dinheiro' | 'Pix' | 'Cartão'>('Pix');
   const [description, setDescription] = useState('');
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const labor = parseFloat(laborValue) || 0;
-    const parts = parseFloat(partsValue) || 0;
-    const oil = parseFloat(oilValue) || 0;
-    const total = labor + parts + oil;
+    setIsSaving(true);
+    try {
+      const labor = parseFloat(laborValue) || 0;
+      const parts = parseFloat(partsValue) || 0;
+      const total = labor + parts;
 
-    if (total <= 0) {
-      toast.error('O valor total deve ser maior que zero');
-      return;
+      if (total <= 0) {
+        toast.error('O valor total deve ser maior que zero');
+        return;
+      }
+
+      await addService({
+        clientName,
+        value: total,
+        laborValue: labor,
+        partsValue: parts,
+        paymentMethod,
+        date: new Date().toISOString().split('T')[0],
+        description
+      });
+
+      toast.success('Serviço registrado com sucesso!', {
+        className: "bg-zinc-900 border-primary/50 text-white",
+      });
+      setIsAdding(false);
+      resetForm();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao registrar serviço');
+    } finally {
+      setIsSaving(false);
     }
-
-    await addService({
-      clientName,
-      value: total,
-      laborValue: labor,
-      partsValue: parts,
-      oilValue: oil,
-      paymentMethod,
-      date: new Date().toISOString().split('T')[0],
-      description
-    });
-
-    toast.success('Serviço registrado com sucesso!', {
-      className: "bg-zinc-900 border-primary/50 text-white",
-    });
-    setIsAdding(false);
-    resetForm();
   };
 
-  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0) + (parseFloat(oilValue) || 0);
+  const currentTotal = (parseFloat(laborValue) || 0) + (parseFloat(partsValue) || 0);
 
   const resetForm = () => {
     setClientName('');
     setLaborValue('');
     setPartsValue('');
-    setOilValue('');
     setDescription('');
   };
 
@@ -93,7 +98,7 @@ export function Services() {
                   <Input autoFocus value={clientName} onChange={e => setClientName(e.target.value)} required className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
                       <Wrench className="w-3 h-3 mr-1 text-primary" /> Mão de Obra
@@ -102,15 +107,9 @@ export function Services() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças
+                      <Package className="w-3 h-3 mr-1 text-primary" /> Peças/Materiais
                     </Label>
                     <Input type="number" value={partsValue} onChange={e => setPartsValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-                      <Droplets className="w-3 h-3 mr-1 text-primary" /> Óleo
-                    </Label>
-                    <Input type="number" value={oilValue} onChange={e => setOilValue(e.target.value)} placeholder="0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                   </div>
                 </div>
 
@@ -138,8 +137,10 @@ export function Services() {
                 </div>
 
                 <div className="flex space-x-3 pt-4">
-                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} className="flex-1 h-14">Cancelar</PremiumButton>
-                  <PremiumButton type="submit" className="flex-[2] h-14">Salvar Serviço</PremiumButton>
+                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="flex-1 h-14">Cancelar</PremiumButton>
+                  <PremiumButton type="submit" disabled={isSaving} className="flex-[2] h-14">
+                    {isSaving ? 'Salvando...' : 'Salvar Serviço'}
+                  </PremiumButton>
                 </div>
               </form>
             </PremiumCard>
@@ -178,18 +179,14 @@ export function Services() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-2 py-3 border-y border-white/5 mb-3">
+              <div className="grid grid-cols-2 gap-2 py-3 border-y border-white/5 mb-3">
                 <div className="text-center">
                   <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Mão de Obra</p>
                   <p className="text-[10px] font-black">R$ {service.laborValue || 0}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Peças</p>
+                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Peças/Materiais</p>
                   <p className="text-[10px] font-black">R$ {service.partsValue || 0}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[7px] text-zinc-500 font-black uppercase mb-0.5">Óleo</p>
-                  <p className="text-[10px] font-black">R$ {service.oilValue || 0}</p>
                 </div>
               </div>
 

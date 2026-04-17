@@ -15,7 +15,6 @@ import {
   Hash, 
   Wrench, 
   Package, 
-  Droplet,
   ChevronDown,
   ChevronUp,
   Search,
@@ -34,6 +33,7 @@ export function Budgets() {
   const { budgets, addBudget, deleteBudget } = useFirebase();
   const { profile } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
@@ -44,7 +44,6 @@ export function Budgets() {
   
   const [services, setServices] = useState<{ description: string; value: string }[]>([{ description: '', value: '' }]);
   const [parts, setParts] = useState<{ description: string; quantity: string; unitValue: string }[]>([{ description: '', quantity: '', unitValue: '' }]);
-  const [oil, setOil] = useState<{ description: string; quantity: string; unitValue: string }[]>([{ description: '', quantity: '', unitValue: '' }]);
 
   // Calculations
   const totalLabor = useMemo(() => services.reduce((acc, s) => acc + (parseFloat(s.value) || 0), 0), [services]);
@@ -55,13 +54,7 @@ export function Budgets() {
     return acc + (q * v);
   }, 0), [parts]);
 
-  const totalOil = useMemo(() => oil.reduce((acc, o) => {
-    const q = parseFloat(o.quantity) || 0;
-    const v = parseFloat(o.unitValue) || 0;
-    return acc + (q * v);
-  }, 0), [oil]);
-
-  const totalGeneral = totalLabor + totalParts + totalOil;
+  const totalGeneral = totalLabor + totalParts;
 
   const resetForm = () => {
     setClientName('');
@@ -70,7 +63,6 @@ export function Budgets() {
     setPlate('');
     setServices([{ description: '', value: '' }]);
     setParts([{ description: '', quantity: '', unitValue: '' }]);
-    setOil([{ description: '', quantity: '', unitValue: '' }]);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -80,36 +72,37 @@ export function Budgets() {
       return;
     }
 
-    const budgetData = {
-      clientName,
-      whatsapp,
-      vehicle,
-      plate,
-      services: services.filter(s => s.description).map(s => ({ description: s.description, value: parseFloat(s.value) || 0 })),
-      parts: parts.filter(p => p.description).map(p => ({
-        description: p.description,
-        quantity: parseFloat(p.quantity) || 0,
-        unitValue: parseFloat(p.unitValue) || 0,
-        total: (parseFloat(p.quantity) || 0) * (parseFloat(p.unitValue) || 0)
-      })),
-      oil: oil.filter(o => o.description).map(o => ({
-        description: o.description,
-        quantity: parseFloat(o.quantity) || 0,
-        unitValue: parseFloat(o.unitValue) || 0,
-        total: (parseFloat(o.quantity) || 0) * (parseFloat(o.unitValue) || 0)
-      })),
-      totalLabor,
-      totalParts,
-      totalOil,
-      totalGeneral,
-      date: new Date().toISOString(),
-      status: 'draft' as const
-    };
+    setIsSaving(true);
+    try {
+      const budgetData = {
+        clientName,
+        whatsapp,
+        vehicle,
+        plate,
+        services: services.filter(s => s.description).map(s => ({ description: s.description, value: parseFloat(s.value) || 0 })),
+        parts: parts.filter(p => p.description).map(p => ({
+          description: p.description,
+          quantity: parseFloat(p.quantity) || 0,
+          unitValue: parseFloat(p.unitValue) || 0,
+          total: (parseFloat(p.quantity) || 0) * (parseFloat(p.unitValue) || 0)
+        })),
+        totalLabor,
+        totalParts,
+        totalGeneral,
+        date: new Date().toISOString(),
+        status: 'draft' as const
+      };
 
-    await addBudget(budgetData);
-    toast.success('Orçamento salvo com sucesso!');
-    setIsAdding(false);
-    resetForm();
+      await addBudget(budgetData);
+      toast.success('Orçamento salvo com sucesso!');
+      setIsAdding(false);
+      resetForm();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao salvar orçamento');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const generatePDF = (budget: Budget) => {
@@ -119,7 +112,7 @@ export function Budgets() {
     // Header
     doc.setFontSize(20);
     doc.setTextColor(0, 255, 136); // Primary Color
-    doc.text(profile?.companyName || 'TOP LUBRI PRO', 105, 20, { align: 'center' });
+    doc.text(profile?.companyName || 'TOP LUBRI PALMITAL', 105, 20, { align: 'center' });
     
     doc.setFontSize(12);
     doc.setTextColor(100);
@@ -156,7 +149,7 @@ export function Budgets() {
     // Parts Table
     if (budget.parts.length > 0) {
       doc.setFontSize(11);
-      doc.text('PEÇAS', 14, currentY);
+      doc.text('PEÇAS E MATERIAIS', 14, currentY);
       autoTable(doc, {
         startY: currentY + 2,
         head: [['Descrição', 'Qtd', 'V. Unit', 'Total']],
@@ -172,49 +165,29 @@ export function Budgets() {
       currentY = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // Oil Table
-    if (budget.oil.length > 0) {
-      doc.setFontSize(11);
-      doc.text('ÓLEO / LUBRIFICANTES', 14, currentY);
-      autoTable(doc, {
-        startY: currentY + 2,
-        head: [['Descrição', 'Qtd', 'V. Unit', 'Total']],
-        body: budget.oil.map(o => [
-          o.description, 
-          o.quantity, 
-          o.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 
-          o.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        ]),
-        theme: 'striped',
-        headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0] }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 10;
-    }
-
     // Totals
     doc.setFontSize(12);
     doc.text(`Total Mão de Obra: R$ ${budget.totalLabor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY, { align: 'right' });
-    doc.text(`Total Peças: R$ ${budget.totalParts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 6, { align: 'right' });
-    doc.text(`Total Óleo: R$ ${budget.totalOil.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 12, { align: 'right' });
+    doc.text(`Total Peças/Materiais: R$ ${budget.totalParts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 6, { align: 'right' });
     
     doc.setFontSize(14);
     doc.setTextColor(0, 180, 100);
-    doc.text(`TOTAL GERAL: R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 22, { align: 'right' });
+    doc.text(`TOTAL GERAL: R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 16, { align: 'right' });
 
     doc.save(`orcamento_${budget.clientName.replace(/\s+/g, '_')}.pdf`);
   };
 
   const shareOnWhatsApp = (budget: Budget) => {
-    const text = `*ORÇAMENTO - ${profile?.companyName || 'Oficina'}*\n\n` +
-                 `👤 Cliente: ${budget.clientName}\n` +
-                 `🚗 Veículo: ${budget.vehicle} (${budget.plate})\n\n` +
-                 `🛠️ *Serviços:* R$ ${budget.totalLabor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-                 `🧩 *Peças:* R$ ${budget.totalParts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-                 `🛢️ *Óleo:* R$ ${budget.totalOil.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
-                 `✅ *TOTAL GERAL: R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n` +
-                 `Aguardamos sua aprovação!`;
+    const dateStr = format(new Date(budget.date), 'dd/MM/yyyy');
+    const text = `--- 🏁 TOP LUBRI - Comprovante 🏁 ---\n\n` +
+                 `📅 *Data:* ${dateStr}\n` +
+                 `🚗 *Veículo:* ${budget.vehicle} / ${budget.plate}\n` +
+                 `🛠️ *Serviço:* Orçamento Preventivo\n` +
+                 `💰 *Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
+                 `Obrigado pela preferência!`;
     
-    const url = `https://wa.me/${budget.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    const phone = budget.whatsapp.replace(/\D/g, '');
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
@@ -274,8 +247,8 @@ export function Budgets() {
                       <p className="text-sm font-black text-white">R$ {budget.totalLabor.toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
-                      <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças + Óleo</p>
-                      <p className="text-sm font-black text-white">R$ {(budget.totalParts + budget.totalOil).toLocaleString()}</p>
+                      <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças e Materiais</p>
+                      <p className="text-sm font-black text-white">R$ {budget.totalParts.toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -461,70 +434,6 @@ export function Budgets() {
               ))}
             </div>
 
-            {/* Óleo Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Droplet className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Óleo / Lubrificantes</h4>
-                </div>
-                <button 
-                  type="button" 
-                  onClick={() => setOil([...oil, { description: '', quantity: '', unitValue: '' }])}
-                  className="p-2 bg-primary/10 rounded-lg"
-                >
-                  <Plus className="w-4 h-4 text-primary" />
-                </button>
-              </div>
-              {oil.map((o, idx) => (
-                <div key={idx} className="space-y-2 p-4 bg-zinc-900/30 rounded-2xl border border-white/5">
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="Tipo de óleo" 
-                      value={o.description} 
-                      onChange={e => {
-                        const newO = [...oil];
-                        newO[idx].description = e.target.value;
-                        setOil(newO);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setOil(oil.filter((_, i) => i !== idx))}
-                      className="text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input 
-                      type="number"
-                      placeholder="Litros/Qtd" 
-                      value={o.quantity} 
-                      onChange={e => {
-                        const newO = [...oil];
-                        newO[idx].quantity = e.target.value;
-                        setOil(newO);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
-                    />
-                    <Input 
-                      type="number"
-                      placeholder="V. Unit R$" 
-                      value={o.unitValue} 
-                      onChange={e => {
-                        const newO = [...oil];
-                        newO[idx].unitValue = e.target.value;
-                        setOil(newO);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* Total Geral Footer */}
             <div className="sticky bottom-4 left-0 right-0 z-40">
               <PremiumCard className="p-6 bg-primary shadow-[0_-10px_40px_rgba(0,255,136,0.3)] border-none">
@@ -535,8 +444,10 @@ export function Budgets() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} className="flex-1 bg-black text-white border-black h-12">Cancelar</PremiumButton>
-                  <PremiumButton type="submit" className="flex-[2] bg-black text-primary border-black h-12">Salvar Orçamento</PremiumButton>
+                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="flex-1 bg-black text-white border-black h-12">Cancelar</PremiumButton>
+                  <PremiumButton type="submit" disabled={isSaving} className="flex-[2] bg-black text-primary border-black h-12">
+                    {isSaving ? 'Salvando...' : 'Salvar Orçamento'}
+                  </PremiumButton>
                 </div>
               </PremiumCard>
             </div>

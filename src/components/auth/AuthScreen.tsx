@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { PremiumButton, PremiumCard } from '../ui/PremiumUI';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { motion } from 'motion/react';
-import { LogIn, Loader2, ShieldCheck, UserPlus, Mail, Lock } from 'lucide-react';
+import { LogIn, Loader2, ShieldCheck, UserPlus, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AuthScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const ensureProfile = async (uid: string, userEmail: string | null) => {
     const userRef = doc(db, 'usuarios', uid);
@@ -77,6 +78,19 @@ export function AuthScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error('Informe seu e-mail para recuperar a senha');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+    } catch (error: any) {
+      toast.error('Erro ao enviar e-mail de recuperação.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] flex flex-col items-center justify-center p-6">
       <motion.div
@@ -124,17 +138,36 @@ export function AuthScreen() {
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-              <Lock className="w-3 h-3 mr-1" /> Senha
-            </Label>
+            <div className="flex justify-between items-center">
+              <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+                <Lock className="w-3 h-3 mr-1" /> Senha
+              </Label>
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[9px] uppercase font-black tracking-widest text-primary hover:text-primary/80"
+              >
+                {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              </button>
+            </div>
             <Input 
-              type="password" 
+              type={showPassword ? "text" : "password"} 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
               required 
               placeholder="••••••••"
               className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12 focus:border-primary/50" 
             />
+          </div>
+
+          <div className="flex justify-end">
+            <button 
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-[9px] uppercase font-black tracking-widest text-zinc-500 hover:text-primary transition-colors"
+            >
+              Esqueci minha senha
+            </button>
           </div>
 
           <div className="pt-4 space-y-3">

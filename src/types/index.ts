@@ -13,7 +13,6 @@ export interface Appointment {
   service: string;
   laborValue: number;
   partsValue: number;
-  oilValue: number;
   date: string;
   time: string;
   status: 'pending' | 'completed' | 'cancelled';
@@ -26,7 +25,6 @@ export interface ServiceRecord {
   value: number;
   laborValue: number;
   partsValue: number;
-  oilValue: number;
   paymentMethod: 'Dinheiro' | 'Pix' | 'Cartão';
   date: string;
   description?: string;
@@ -63,10 +61,8 @@ export interface Budget {
   plate: string;
   services: { description: string; value: number }[];
   parts: BudgetItem[];
-  oil: BudgetItem[];
   totalLabor: number;
   totalParts: number;
-  totalOil: number;
   totalGeneral: number;
   date: string;
   status: 'draft' | 'sent' | 'approved';

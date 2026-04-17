@@ -2,25 +2,23 @@ import React, { useState } from 'react';
 import { PremiumCard, PremiumButton } from '../ui/PremiumUI';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { FileText, Download, User, DollarSign } from 'lucide-react';
+import { FileText, Download, User, DollarSign, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function Receipts() {
+  const { profile } = useAuth();
   const [clientName, setClientName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [value, setValue] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleGenerate = () => {
-    if (!clientName || !value) {
-      toast.error('Preencha o cliente e o valor');
-      return;
-    }
-
+  const generateContent = () => {
     const date = new Date().toLocaleDateString('pt-BR');
-    const content = `
+    return `
 ========================================
-           TOP LUBRI PRO
+       ${(profile?.companyName || 'TOP LUBRI').toUpperCase()}
 ========================================
 DATA: ${date}
 CLIENTE: ${clientName}
@@ -32,7 +30,15 @@ ${description || 'Serviços de manutenção automotiva'}
 Obrigado pela preferência!
 ========================================
     `.trim();
+  };
 
+  const handleDownload = () => {
+    if (!clientName || !value) {
+      toast.error('Preencha o cliente e o valor');
+      return;
+    }
+
+    const content = generateContent();
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -43,9 +49,27 @@ Obrigado pela preferência!
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast.success('Nota gerada com sucesso!', {
-      className: "bg-zinc-900 border-primary/50 text-white",
-    });
+    toast.success('Nota baixada com sucesso!');
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!clientName || !value || !whatsapp) {
+      toast.error('Preencha o cliente, valor e WhatsApp');
+      return;
+    }
+
+    const date = new Date().toLocaleDateString('pt-BR');
+    const text = `*COMPROVANTE - ${profile?.companyName || 'Top Lubri'}*\n\n` +
+                 `📅 *Data:* ${date}\n` +
+                 `👤 *Cliente:* ${clientName}\n` +
+                 `💰 *Valor:* R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                 `📝 *Descrição:* ${description || 'Serviços de manutenção'}\n\n` +
+                 `Obrigado pela preferência!`;
+
+    const phone = whatsapp.replace(/\D/g, '');
+    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+    toast.success('Redirecionando para o WhatsApp...');
   };
 
   return (
@@ -61,21 +85,35 @@ Obrigado pela preferência!
             <FileText className="w-8 h-8 text-primary" />
           </div>
           <h3 className="text-xl font-black tracking-tighter uppercase italic">Comprovante Rápido</h3>
-          <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1">Gere um arquivo de texto para o cliente</p>
+          <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1">Gere um comprovante limpo para o cliente</p>
         </div>
 
         <form className="space-y-6">
-          <div className="space-y-2">
-            <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
-              <User className="w-3 h-3 mr-2 text-primary" /> Cliente
-            </Label>
-            <Input 
-              autoFocus
-              value={clientName} 
-              onChange={e => setClientName(e.target.value)} 
-              placeholder="Nome do cliente"
-              className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+                <User className="w-3 h-3 mr-2 text-primary" /> Cliente
+              </Label>
+              <Input 
+                autoFocus
+                value={clientName} 
+                onChange={e => setClientName(e.target.value)} 
+                placeholder="Nome do cliente"
+                className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center">
+                <MessageCircle className="w-3 h-3 mr-2 text-[#25D366]" /> WhatsApp
+              </Label>
+              <Input 
+                value={whatsapp} 
+                onChange={e => setWhatsapp(e.target.value)} 
+                placeholder="11999999999"
+                className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -102,20 +140,32 @@ Obrigado pela preferência!
             />
           </div>
 
-          <PremiumButton 
-            type="button" 
-            onClick={handleGenerate}
-            className="w-full h-16 rounded-2xl flex items-center justify-center space-x-3"
-          >
-            <Download className="w-6 h-6" />
-            <span>Baixar Nota (.txt)</span>
-          </PremiumButton>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+            <PremiumButton 
+              type="button" 
+              variant="outline"
+              onClick={handleDownload}
+              className="h-16 rounded-2xl flex items-center justify-center space-x-3 border-zinc-700"
+            >
+              <Download className="w-6 h-6" />
+              <span>Baixar TXT</span>
+            </PremiumButton>
+
+            <PremiumButton 
+              type="button" 
+              onClick={handleShareWhatsApp}
+              className="h-16 rounded-2xl flex items-center justify-center space-x-3 bg-[#25D366] border-[#25D366] text-white hover:bg-[#1fb354]"
+            >
+              <MessageCircle className="w-6 h-6" />
+              <span>Enviar WhatsApp</span>
+            </PremiumButton>
+          </div>
         </form>
       </PremiumCard>
 
-      <div className="p-6 bg-zinc-900/30 rounded-3xl border border-white/5">
+      <div className="p-6 bg-zinc-900/30 rounded-3xl border border-white/5 text-center">
         <p className="text-[10px] text-zinc-500 font-bold leading-relaxed">
-          <span className="text-primary font-black">DICA:</span> Você pode enviar este arquivo diretamente pelo WhatsApp para o seu cliente como um comprovante profissional.
+          O comprovante será formatado profissionalmente para leitura rápida.
         </p>
       </div>
     </div>
