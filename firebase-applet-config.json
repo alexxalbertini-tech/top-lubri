@@ -1,10 +1,10 @@
 {
-  "projectId": "top-lubri",
-  "appId": "1:674482884657:web:e85caa065f8be902410510",
-  "apiKey": "AIzaSyBbIXyGkook4vBbS_pxXT16ryjvlzCe0rY",
-  "authDomain": "top-lubri.firebaseapp.com",
+  "projectId": "top-lubri-689d4",
+  "appId": "1:944905504454:web:d3c78dd1ea7eae386679c7",
+  "apiKey": "AIzaSyAY6U0R8KIwNTXBaqBOScFo0LRzdYjF6aU",
+  "authDomain": "top-lubri-689d4.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
-  "storageBucket": "top-lubri.firebasestorage.app",
-  "messagingSenderId": "674482884657",
-  "measurementId": "G-BSMTRN70BJ"
+  "storageBucket": "top-lubri-689d4.firebasestorage.app",
+  "messagingSenderId": "944905504454",
+  "measurementId": "G-6EXH7P6W7V"
 }
