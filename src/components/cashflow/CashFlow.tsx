@@ -22,6 +22,8 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+    
     const val = parseFloat(value);
     if (isNaN(val) || val <= 0) {
       toast.error('Informe um valor válido');
@@ -30,6 +32,7 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
     setIsSaving(true);
     try {
+      // 1. Await database operation fully
       await addCashFlowEntry({
         type: entryType,
         value: val,
@@ -38,17 +41,24 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
         date: new Date().toISOString().split('T')[0]
       });
 
-      toast.success(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada!`, {
-        className: "bg-zinc-900 border-primary/50 text-white",
-      });
+      // 2. Success Feedback
+      alert(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
 
-      // Professional success flow:
-      setIsAdding(false);
+      // 3. Reset and Close flow (PROFESSIONAL)
       resetForm();
+      setIsAdding(false);
+      
+      // 4. Update Tab
       if (setActiveTab) setActiveTab('dashboard');
+
+      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao registrar fluxo de caixa');
+      console.error('ERRO AO REGISTRAR CAIXA:', error);
+      toast.error('Erro ao registrar fluxo de caixa. Verifique sua conexão.');
     } finally {
       setIsSaving(false);
     }

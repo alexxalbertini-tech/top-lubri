@@ -28,6 +28,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     
     setIsSaving(true);
     try {
@@ -35,6 +36,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
       const parts = parseFloat(partsValue) || 0;
       const oil = parseFloat(oilValue) || 0;
 
+      // 1. Await database operation fully
       await addAppointment({
         clientName,
         whatsapp,
@@ -48,17 +50,24 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
         status: 'pending',
       });
 
-      toast.success('Agendamento confirmado!', {
-        className: "bg-zinc-900 border-primary/50 text-white",
-      });
+      // 2. Success Feedback
+      alert('Agendamento confirmado com sucesso!');
       
-      // Professional success flow:
-      setIsAdding(false);
+      // 3. Reset and Close flow (PROFESSIONAL)
       resetForm();
+      setIsAdding(false);
+      
+      // 4. Update Tab (State based navigation)
       if (setActiveTab) setActiveTab('dashboard');
+
+      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao realizar agendamento');
+      console.error('ERRO AO AGENDAR:', error);
+      toast.error('Erro ao realizar agendamento. Verifique sua conexão.');
     } finally {
       setIsSaving(false);
     }

@@ -67,6 +67,7 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!clientName) {
       toast.error('Informe o nome do cliente');
       return;
@@ -93,16 +94,27 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
         status: 'draft' as const
       };
 
+      // 1. Await database operation fully
       await addBudget(budgetData);
-      toast.success('Orçamento salvo com sucesso!');
+
+      // 2. Success Feedback
+      alert('Orçamento salvo com sucesso!');
       
-      // Professional success flow:
-      setIsAdding(false);
+      // 3. Reset and Close flow (PROFESSIONAL)
       resetForm();
+      setIsAdding(false);
+      
+      // 4. Update Tab
       if (setActiveTab) setActiveTab('dashboard');
+
+      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao salvar orçamento');
+      console.error('ERRO AO SALVAR ORÇAMENTO:', error);
+      toast.error('Erro ao salvar orçamento. Verifique sua conexão.');
     } finally {
       setIsSaving(false);
     }

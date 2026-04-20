@@ -25,6 +25,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     
     setIsSaving(true);
     try {
@@ -35,9 +36,11 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
 
       if (total <= 0) {
         toast.error('O valor total deve ser maior que zero');
+        setIsSaving(false);
         return;
       }
 
+      // 1. Await database operation fully
       await addService({
         clientName,
         whatsapp,
@@ -51,17 +54,24 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
         description
       });
 
-      toast.success('Serviço registrado com sucesso!', {
-        className: "bg-zinc-900 border-primary/50 text-white",
-      });
+      // 2. Success Feedback
+      alert('Salvo com Sucesso!');
       
-      // Professional success flow:
-      setIsAdding(false);
+      // 3. Reset and Close flow (PROFESSIONAL)
       resetForm();
+      setIsAdding(false);
+      
+      // 4. Update Tab (State based navigation)
       if (setActiveTab) setActiveTab('dashboard');
+
+      // 5. Final fallback: Forced reload/navigation as requested by user (HARD TEST)
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao registrar serviço');
+      console.error('ERRO AO SALVAR SERVIÇO:', error);
+      toast.error('Erro ao registrar serviço. Verifique sua conexão.');
     } finally {
       setIsSaving(false);
     }

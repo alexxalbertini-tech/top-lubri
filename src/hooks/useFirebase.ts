@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy, limit } from 'firebase/firestore';
-import { db, handleFirestoreError } from '../lib/firebase';
+import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { useAuth } from './useAuth';
 import { Appointment, ServiceRecord, CashFlowEntry, Budget } from '../types';
 
@@ -45,7 +45,16 @@ export function useFirebase() {
       orderBy('date', 'desc')
     );
     const unsubscribeCashFlow = onSnapshot(qCashFlow, (snap) => {
-      setCashFlow(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CashFlowEntry)));
+      setCashFlow(snap.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          // Map Portuguese fields if they exist for UI compatibility
+          type: data.tipo || data.type || 'entry',
+          value: data.valor || data.value || 0
+        } as CashFlowEntry;
+      }));
     }, (err) => handleFirestoreError(err, 'LIST', `usuarios/${user.uid}/caixa`));
 
     const qBudgets = query(
@@ -67,36 +76,46 @@ export function useFirebase() {
   }, [user]);
 
   const addAppointment = async (data: Omit<Appointment, 'id' | 'userId'>) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await addDoc(collection(db, 'usuarios', user.uid, 'agendamentos'), { ...data, userId: user.uid });
+      await addDoc(collection(db, 'usuarios', currentUser.uid, 'agendamentos'), { 
+        ...data, 
+        userId: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${user.uid}/agendamentos`);
+      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/agendamentos`);
+      throw err;
     }
   };
 
   const updateAppointment = async (id: string, data: Partial<Appointment>) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await updateDoc(doc(db, 'usuarios', user.uid, 'agendamentos', id), data);
+      await updateDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', id), data);
     } catch (err) {
-      handleFirestoreError(err, 'UPDATE', `usuarios/${user.uid}/agendamentos/${id}`);
+      handleFirestoreError(err, 'UPDATE', `usuarios/${currentUser.uid}/agendamentos/${id}`);
+      throw err;
     }
   };
 
   const deleteAppointment = async (id: string) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await deleteDoc(doc(db, 'usuarios', user.uid, 'agendamentos', id));
+      await deleteDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', id));
     } catch (err) {
-      handleFirestoreError(err, 'DELETE', `usuarios/${user.uid}/agendamentos/${id}`);
+      handleFirestoreError(err, 'DELETE', `usuarios/${currentUser.uid}/agendamentos/${id}`);
+      throw err;
     }
   };
 
   const addService = async (data: Omit<ServiceRecord, 'id' | 'userId'>) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      // Valor total = Mão de Obra + Peças (Óleo já consolidado em Peças)
       const laborValue = parseFloat(String(data.laborValue)) || 0;
       const partsValue = parseFloat(String(data.partsValue)) || 0;
       const oilValue = parseFloat(String(data.oilValue)) || 0;
@@ -108,81 +127,109 @@ export function useFirebase() {
         partsValue,
         oilValue,
         value: totalValue, 
-        userId: user.uid,
+        // Portuguese aliases for the user's specific audit request
+        maoDeObra: laborValue,
+        pecas: partsValue,
+        oleo: oilValue,
+        total: totalValue,
+        userId: currentUser.uid,
         createdAt: new Date().toISOString()
       };
       
       // Step 1: Save the service record
-      const serviceRef = await addDoc(collection(db, 'usuarios', user.uid, 'servicos'), serviceData);
+      const serviceRef = await addDoc(collection(db, 'usuarios', currentUser.uid, 'servicos'), serviceData);
       
-      // Step 2: Automatically record in cash flow (FINANCEIRO INTEGRADO)
-      await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
-        userId: user.uid,
-        type: 'entry',
-        value: totalValue,
+      // Step 2: Automatically record in cash flow (INTEGRAÇÃO FINANCEIRA)
+      await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), {
+        userId: currentUser.uid,
+        tipo: 'entrada',
+        valor: totalValue,
+        origem: 'servico',
+        referenciaId: serviceRef.id,
         description: `Serviço: ${data.clientName} (${data.vehicle || 'Geral'})`,
         paymentMethod: data.paymentMethod,
         date: data.date,
-        serviceId: serviceRef.id,
         createdAt: new Date().toISOString()
       });
       
       return serviceRef;
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${user.uid}/servicos`);
+      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/servicos`);
       throw err;
     }
   };
 
   const addCashFlowEntry = async (data: Omit<CashFlowEntry, 'id' | 'userId'>) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), { ...data, userId: user.uid });
+      await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), { 
+        userId: currentUser.uid,
+        tipo: data.type === 'entry' ? 'entrada' : 'saída',
+        type: data.type, // keep both for safety
+        valor: data.value,
+        value: data.value, // keep both for safety
+        description: data.description,
+        paymentMethod: data.paymentMethod,
+        date: data.date,
+        createdAt: new Date().toISOString()
+      });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${user.uid}/caixa`);
+      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/caixa`);
+      throw err;
     }
   };
 
   const addBudget = async (data: Omit<Budget, 'id' | 'userId'>) => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      return await addDoc(collection(db, 'usuarios', user.uid, 'orcamentos'), { ...data, userId: user.uid });
+      return await addDoc(collection(db, 'usuarios', currentUser.uid, 'orcamentos'), { 
+        ...data, 
+        userId: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${user.uid}/orcamentos`);
+      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/orcamentos`);
+      throw err;
     }
   };
 
   const deleteBudget = async (id: string) => {
-    if (!user) return;
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await deleteDoc(doc(db, 'usuarios', user.uid, 'orcamentos', id));
+      await deleteDoc(doc(db, 'usuarios', currentUser.uid, 'orcamentos', id));
     } catch (err) {
-      handleFirestoreError(err, 'DELETE', `usuarios/${user.uid}/orcamentos/${id}`);
+      handleFirestoreError(err, 'DELETE', `usuarios/${currentUser.uid}/orcamentos/${id}`);
+      throw err;
     }
   };
 
   const completeAppointment = async (appointment: Appointment) => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Usuário não autenticado');
     try {
       // 1. Update status to completed
-      await updateDoc(doc(db, 'usuarios', user.uid, 'agendamentos', appointment.id), { status: 'completed' });
+      await updateDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', appointment.id), { status: 'completed' });
       
       // 2. Automatically record in finance (INTEGRAÇÃO FINANCEIRA)
       const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0) + (appointment.oilValue || 0);
       if (totalValue > 0) {
-        await addDoc(collection(db, 'usuarios', user.uid, 'caixa'), {
-          userId: user.uid,
+        await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), {
+          userId: currentUser.uid,
           type: 'entry',
           value: totalValue,
           description: `Agenda Concluída: ${appointment.clientName} (${appointment.vehicle || 'Geral'})`,
-          paymentMethod: 'Dinheiro', // Default or could be a parameter
+          paymentMethod: 'Dinheiro', 
           date: new Date().toISOString().split('T')[0],
           appointmentId: appointment.id,
           createdAt: new Date().toISOString()
         });
       }
     } catch (err) {
-      handleFirestoreError(err, 'UPDATE', `usuarios/${user.uid}/agendamentos/${appointment.id}`);
+      handleFirestoreError(err, 'UPDATE', `usuarios/${currentUser.uid}/agendamentos/${appointment.id}`);
+      throw err;
     }
   };
 
