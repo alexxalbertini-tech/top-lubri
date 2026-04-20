@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -16,6 +16,9 @@ try {
 }
 
 export const auth = getAuth(app);
+
+// Forçar persistência local para evitar deslogar acidentalmente
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 // Initialize Firestore with robust database ID handling
 export const db = (firebaseConfig as any)?.firestoreDatabaseId && (firebaseConfig as any)?.firestoreDatabaseId !== '(default)'

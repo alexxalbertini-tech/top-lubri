@@ -23,25 +23,28 @@ export function useFirebase() {
     }
 
     const qAppointments = query(
-      collection(db, 'usuarios', user.uid, 'agendamentos'),
+      collection(db, 'agendamentos'),
+      where('userId', '==', user.uid),
       orderBy('date', 'desc'),
       limit(50)
     );
     const unsubscribeAppointments = onSnapshot(qAppointments, (snap) => {
       setAppointments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
-    }, (err) => handleFirestoreError(err, 'LIST', `usuarios/${user.uid}/agendamentos`));
+    }, (err) => handleFirestoreError(err, 'LIST', 'agendamentos'));
 
     const qServices = query(
-      collection(db, 'usuarios', user.uid, 'servicos'),
+      collection(db, 'servicos'),
+      where('userId', '==', user.uid),
       orderBy('date', 'desc'),
       limit(100)
     );
     const unsubscribeServices = onSnapshot(qServices, (snap) => {
       setServices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord)));
-    }, (err) => handleFirestoreError(err, 'LIST', `usuarios/${user.uid}/servicos`));
+    }, (err) => handleFirestoreError(err, 'LIST', 'servicos'));
 
     const qCashFlow = query(
-      collection(db, 'usuarios', user.uid, 'caixa'),
+      collection(db, 'caixa'),
+      where('userId', '==', user.uid),
       orderBy('date', 'desc')
     );
     const unsubscribeCashFlow = onSnapshot(qCashFlow, (snap) => {
@@ -55,17 +58,18 @@ export function useFirebase() {
           value: data.valor || data.value || 0
         } as CashFlowEntry;
       }));
-    }, (err) => handleFirestoreError(err, 'LIST', `usuarios/${user.uid}/caixa`));
+    }, (err) => handleFirestoreError(err, 'LIST', 'caixa'));
 
     const qBudgets = query(
-      collection(db, 'usuarios', user.uid, 'orcamentos'),
+      collection(db, 'orcamentos'),
+      where('userId', '==', user.uid),
       orderBy('date', 'desc'),
       limit(50)
     );
     const unsubscribeBudgets = onSnapshot(qBudgets, (snap) => {
       setBudgets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
       setLoading(false);
-    }, (err) => handleFirestoreError(err, 'LIST', `usuarios/${user.uid}/orcamentos`));
+    }, (err) => handleFirestoreError(err, 'LIST', 'orcamentos'));
 
     return () => {
       unsubscribeAppointments();
@@ -79,13 +83,13 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await addDoc(collection(db, 'usuarios', currentUser.uid, 'agendamentos'), { 
+      await addDoc(collection(db, 'agendamentos'), { 
         ...data, 
         userId: currentUser.uid,
         createdAt: new Date().toISOString()
       });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/agendamentos`);
+      handleFirestoreError(err, 'CREATE', `agendamentos`);
       throw err;
     }
   };
@@ -94,9 +98,9 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await updateDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', id), data);
+      await updateDoc(doc(db, 'agendamentos', id), data);
     } catch (err) {
-      handleFirestoreError(err, 'UPDATE', `usuarios/${currentUser.uid}/agendamentos/${id}`);
+      handleFirestoreError(err, 'UPDATE', `agendamentos/${id}`);
       throw err;
     }
   };
@@ -105,9 +109,9 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await deleteDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', id));
+      await deleteDoc(doc(db, 'agendamentos', id));
     } catch (err) {
-      handleFirestoreError(err, 'DELETE', `usuarios/${currentUser.uid}/agendamentos/${id}`);
+      handleFirestoreError(err, 'DELETE', `agendamentos/${id}`);
       throw err;
     }
   };
@@ -137,10 +141,10 @@ export function useFirebase() {
       };
       
       // Step 1: Save the service record
-      const serviceRef = await addDoc(collection(db, 'usuarios', currentUser.uid, 'servicos'), serviceData);
+      const serviceRef = await addDoc(collection(db, 'servicos'), serviceData);
       
       // Step 2: Automatically record in cash flow (INTEGRAÇÃO FINANCEIRA)
-      await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), {
+      await addDoc(collection(db, 'caixa'), {
         userId: currentUser.uid,
         tipo: 'entrada',
         valor: totalValue,
@@ -154,7 +158,7 @@ export function useFirebase() {
       
       return serviceRef;
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/servicos`);
+      handleFirestoreError(err, 'CREATE', `servicos`);
       throw err;
     }
   };
@@ -163,7 +167,7 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), { 
+      await addDoc(collection(db, 'caixa'), { 
         userId: currentUser.uid,
         tipo: data.type === 'entry' ? 'entrada' : 'saída',
         type: data.type, // keep both for safety
@@ -175,7 +179,7 @@ export function useFirebase() {
         createdAt: new Date().toISOString()
       });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/caixa`);
+      handleFirestoreError(err, 'CREATE', `caixa`);
       throw err;
     }
   };
@@ -184,13 +188,13 @@ export function useFirebase() {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      return await addDoc(collection(db, 'usuarios', currentUser.uid, 'orcamentos'), { 
+      return await addDoc(collection(db, 'orcamentos'), { 
         ...data, 
         userId: currentUser.uid,
         createdAt: new Date().toISOString()
       });
     } catch (err) {
-      handleFirestoreError(err, 'CREATE', `usuarios/${currentUser.uid}/orcamentos`);
+      handleFirestoreError(err, 'CREATE', `orcamentos`);
       throw err;
     }
   };
@@ -199,9 +203,9 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      await deleteDoc(doc(db, 'usuarios', currentUser.uid, 'orcamentos', id));
+      await deleteDoc(doc(db, 'orcamentos', id));
     } catch (err) {
-      handleFirestoreError(err, 'DELETE', `usuarios/${currentUser.uid}/orcamentos/${id}`);
+      handleFirestoreError(err, 'DELETE', `orcamentos/${id}`);
       throw err;
     }
   };
@@ -211,15 +215,15 @@ export function useFirebase() {
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
       // 1. Update status to completed
-      await updateDoc(doc(db, 'usuarios', currentUser.uid, 'agendamentos', appointment.id), { status: 'completed' });
+      await updateDoc(doc(db, 'agendamentos', appointment.id), { status: 'completed' });
       
       // 2. Automatically record in finance (INTEGRAÇÃO FINANCEIRA)
       const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0) + (appointment.oilValue || 0);
       if (totalValue > 0) {
-        await addDoc(collection(db, 'usuarios', currentUser.uid, 'caixa'), {
+        await addDoc(collection(db, 'caixa'), {
           userId: currentUser.uid,
-          type: 'entry',
-          value: totalValue,
+          tipo: 'entrada',
+          valor: totalValue,
           description: `Agenda Concluída: ${appointment.clientName} (${appointment.vehicle || 'Geral'})`,
           paymentMethod: 'Dinheiro', 
           date: new Date().toISOString().split('T')[0],
@@ -228,7 +232,7 @@ export function useFirebase() {
         });
       }
     } catch (err) {
-      handleFirestoreError(err, 'UPDATE', `usuarios/${currentUser.uid}/agendamentos/${appointment.id}`);
+      handleFirestoreError(err, 'UPDATE', `agendamentos/${appointment.id}`);
       throw err;
     }
   };

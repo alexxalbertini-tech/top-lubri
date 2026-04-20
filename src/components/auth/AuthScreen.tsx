@@ -37,16 +37,11 @@ export function AuthScreen() {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await ensureProfile(result.user.uid, result.user.email);
-      toast.success('Bem-vindo de volta!');
+      // alert('Login realizado com sucesso!'); // User requested alert for success feedback in logic
+      window.location.href = "/";
     } catch (error: any) {
       console.error('ERRO LOGIN:', error.code);
-      let msg = 'Erro ao entrar';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        msg = 'E-mail ou senha incorretos.';
-      } else if (error.code === 'auth/invalid-email') {
-        msg = 'E-mail inválido.';
-      }
-      toast.error(msg);
+      alert("Erro no login: " + error.message);
     } finally {
       setIsLoggingIn(false);
     }
@@ -54,25 +49,20 @@ export function AuthScreen() {
 
   const handleRegister = async () => {
     if (isLoggingIn || !email || !password) return;
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
-      return;
-    }
     
-    setIsLoggingIn(true);
     try {
+      if (!email || !password) throw new Error("Preencha todos os campos");
+      if (password.length < 6) throw new Error("Senha mínima 6 caracteres");
+
+      setIsLoggingIn(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await ensureProfile(result.user.uid, result.user.email);
-      toast.success('Conta criada com sucesso!');
+      
+      alert("Conta criada com sucesso");
+      window.location.href = "/";
     } catch (error: any) {
       console.error('ERRO CADASTRO:', error.code);
-      let msg = 'Erro ao cadastrar';
-      if (error.code === 'auth/email-already-in-use') {
-        msg = 'Este e-mail já está em uso.';
-      } else if (error.code === 'auth/weak-password') {
-        msg = 'Senha muito fraca.';
-      }
-      toast.error(msg);
+      alert(error.message);
     } finally {
       setIsLoggingIn(false);
     }
@@ -143,6 +133,7 @@ export function AuthScreen() {
             </Label>
             <div className="relative">
               <Input 
+                id="senha"
                 type={showPassword ? "text" : "password"} 
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
