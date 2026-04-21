@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { useAuth } from './useAuth';
 import { Appointment, ServiceRecord, CashFlowEntry, Budget } from '../types';
@@ -22,30 +22,78 @@ export function useFirebase() {
       return;
     }
 
+    // Listen for appointments
     const qAppointments = query(
       collection(db, 'agendamentos'),
       where('userId', '==', user.uid),
-      orderBy('date', 'desc'),
+      orderBy('createdAt', 'desc'),
       limit(50)
     );
     const unsubscribeAppointments = onSnapshot(qAppointments, (snap) => {
-      setAppointments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
-    }, (err) => handleFirestoreError(err, 'LIST', 'agendamentos'));
+      setAppointments(snap.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          // Robust mapping for compatibility
+          clientName: data.clientName || data.cliente || 'Cliente',
+          service: data.service || data.servico || 'Geral',
+          status: data.status || 'pending',
+          laborValue: Number(data.laborValue || data.maoDeObra || 0),
+          partsValue: Number(data.partsValue || data.pecas || 0),
+          oilValue: Number(data.oilValue || data.oleo || 0),
+          date: data.date || (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+        } as Appointment;
+      }));
+    }, (err) => {
+      console.warn('Firestore fallback mode for agendamentos');
+      // If composite index is missing, try without orderBy
+      const fallbackQuery = query(collection(db, 'agendamentos'), where('userId', '==', user.uid));
+      onSnapshot(fallbackQuery, (fallbackSnap) => {
+        setAppointments(fallbackSnap.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, clientName: data.clientName || data.cliente || 'Cliente', service: data.service || data.servico || 'Geral' } as Appointment;
+        }));
+      });
+    });
 
+    // Listen for services
     const qServices = query(
       collection(db, 'servicos'),
       where('userId', '==', user.uid),
-      orderBy('date', 'desc'),
+      orderBy('createdAt', 'desc'),
       limit(100)
     );
     const unsubscribeServices = onSnapshot(qServices, (snap) => {
-      setServices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord)));
-    }, (err) => handleFirestoreError(err, 'LIST', 'servicos'));
+      setServices(snap.docs.map(doc => {
+          const data = doc.data();
+          return { 
+            id: doc.id, 
+            ...data,
+            clientName: data.clientName || data.cliente || 'Cliente',
+            value: Number(data.value || data.total || data.valor || 0),
+            laborValue: Number(data.laborValue || data.maoDeObra || 0),
+            partsValue: Number(data.partsValue || data.pecas || 0),
+            oilValue: Number(data.oilValue || data.oleo || 0),
+            date: data.date || (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+          } as ServiceRecord;
+      }));
+    }, (err) => {
+      console.warn('Firestore fallback mode for servicos');
+      const fallbackQuery = query(collection(db, 'servicos'), where('userId', '==', user.uid));
+      onSnapshot(fallbackQuery, (fallbackSnap) => {
+        setServices(fallbackSnap.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, clientName: data.clientName || data.cliente || 'Cliente', value: Number(data.value || data.total || data.valor || 0) } as ServiceRecord;
+        }));
+      });
+    });
 
+    // Listen for cash flow
     const qCashFlow = query(
       collection(db, 'caixa'),
       where('userId', '==', user.uid),
-      orderBy('date', 'desc')
+      orderBy('createdAt', 'desc')
     );
     const unsubscribeCashFlow = onSnapshot(qCashFlow, (snap) => {
       setCashFlow(snap.docs.map(doc => {
@@ -53,17 +101,26 @@ export function useFirebase() {
         return { 
           id: doc.id, 
           ...data,
-          // Map Portuguese fields if they exist for UI compatibility
-          type: data.tipo || data.type || 'entry',
-          value: data.valor || data.value || 0
+          type: data.tipo === 'entrada' ? 'entry' : (data.type || 'entry'),
+          value: Number(data.valor || data.value || 0)
         } as CashFlowEntry;
       }));
-    }, (err) => handleFirestoreError(err, 'LIST', 'caixa'));
+    }, (err) => {
+      console.warn('Firestore fallback mode for caixa');
+      const fallbackQuery = query(collection(db, 'caixa'), where('userId', '==', user.uid));
+      onSnapshot(fallbackQuery, (fallbackSnap) => {
+        setCashFlow(fallbackSnap.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, type: data.tipo === 'entrada' ? 'entry' : (data.type || 'entry'), value: Number(data.valor || data.value || 0) } as CashFlowEntry;
+        }));
+      });
+    });
 
+    // Listen for budgets
     const qBudgets = query(
       collection(db, 'orcamentos'),
       where('userId', '==', user.uid),
-      orderBy('date', 'desc'),
+      orderBy('createdAt', 'desc'),
       limit(50)
     );
     const unsubscribeBudgets = onSnapshot(qBudgets, (snap) => {
@@ -85,8 +142,13 @@ export function useFirebase() {
     try {
       await addDoc(collection(db, 'agendamentos'), { 
         ...data, 
+        cliente: data.clientName, // compatibility
+        servico: data.service,    // compatibility
+        maoDeObra: data.laborValue, // compatibility
+        pecas: data.partsValue,     // compatibility
+        oleo: data.oilValue,        // compatibility
         userId: currentUser.uid,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       });
     } catch (err) {
       handleFirestoreError(err, 'CREATE', `agendamentos`);
@@ -131,29 +193,30 @@ export function useFirebase() {
         partsValue,
         oilValue,
         value: totalValue, 
-        // Portuguese aliases for the user's specific audit request
+        cliente: data.clientName, // compatibility
         maoDeObra: laborValue,
         pecas: partsValue,
         oleo: oilValue,
         total: totalValue,
+        valor: totalValue,
         userId: currentUser.uid,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       };
       
-      // Step 1: Save the service record
       const serviceRef = await addDoc(collection(db, 'servicos'), serviceData);
       
-      // Step 2: Automatically record in cash flow (INTEGRAÇÃO FINANCEIRA)
       await addDoc(collection(db, 'caixa'), {
         userId: currentUser.uid,
         tipo: 'entrada',
+        type: 'entry',
         valor: totalValue,
+        value: totalValue,
         origem: 'servico',
         referenciaId: serviceRef.id,
         description: `Serviço: ${data.clientName} (${data.vehicle || 'Geral'})`,
         paymentMethod: data.paymentMethod,
         date: data.date,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       });
       
       return serviceRef;
@@ -170,13 +233,14 @@ export function useFirebase() {
       await addDoc(collection(db, 'caixa'), { 
         userId: currentUser.uid,
         tipo: data.type === 'entry' ? 'entrada' : 'saída',
-        type: data.type, // keep both for safety
+        type: data.type,
         valor: data.value,
-        value: data.value, // keep both for safety
+        value: data.value,
         description: data.description,
+        descricao: data.description, // compatibility
         paymentMethod: data.paymentMethod,
         date: data.date,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       });
     } catch (err) {
       handleFirestoreError(err, 'CREATE', `caixa`);
@@ -191,7 +255,7 @@ export function useFirebase() {
       return await addDoc(collection(db, 'orcamentos'), { 
         ...data, 
         userId: currentUser.uid,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       });
     } catch (err) {
       handleFirestoreError(err, 'CREATE', `orcamentos`);
@@ -217,18 +281,21 @@ export function useFirebase() {
       // 1. Update status to completed
       await updateDoc(doc(db, 'agendamentos', appointment.id), { status: 'completed' });
       
-      // 2. Automatically record in finance (INTEGRAÇÃO FINANCEIRA)
+      // 2. Automatically record in finance
       const totalValue = (appointment.laborValue || 0) + (appointment.partsValue || 0) + (appointment.oilValue || 0);
       if (totalValue > 0) {
         await addDoc(collection(db, 'caixa'), {
           userId: currentUser.uid,
           tipo: 'entrada',
+          type: 'entry',
           valor: totalValue,
+          value: totalValue,
           description: `Agenda Concluída: ${appointment.clientName} (${appointment.vehicle || 'Geral'})`,
+          descricao: `Agenda Concluída: ${appointment.clientName} (${appointment.vehicle || 'Geral'})`,
           paymentMethod: 'Dinheiro', 
           date: new Date().toISOString().split('T')[0],
           appointmentId: appointment.id,
-          createdAt: new Date().toISOString()
+          createdAt: serverTimestamp()
         });
       }
     } catch (err) {
