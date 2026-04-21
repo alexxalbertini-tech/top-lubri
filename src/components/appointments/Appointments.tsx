@@ -97,8 +97,13 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
   };
 
   const handleDelete = async (id: string) => {
-    await deleteAppointment(id);
-    toast.error('Agendamento removido');
+    if (!confirm("Deseja realmente excluir este agendamento?")) return;
+    try {
+      await deleteAppointment(id);
+      toast.success('Agendamento removido com sucesso');
+    } catch (error) {
+      toast.error('Erro ao excluir agendamento');
+    }
   };
 
   const openWhatsApp = (app: Appointment) => {

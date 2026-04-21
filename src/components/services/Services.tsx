@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFirebase } from '@/hooks/useFirebase';
 import { PremiumCard, PremiumButton } from '@/components/ui/PremiumUI';
-import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Share2, Droplets } from 'lucide-react';
+import { Plus, TrendingUp, User, CreditCard, Banknote, QrCode, ChevronRight, Wrench, Package, Share2, Droplets, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion, AnimatePresence } from 'motion/react';
 
 export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { services, addService } = useFirebase();
+  const { services, addService, deleteService } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -87,6 +87,16 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     setPartsValue('');
     setOilValue('');
     setDescription('');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Deseja realmente excluir este registro de serviço?")) return;
+    try {
+      await deleteService(id);
+      toast.success('Serviço removido com sucesso');
+    } catch (error) {
+      toast.error('Erro ao excluir serviço');
+    }
   };
 
   const handleShareWhatsApp = (service: any) => {
@@ -253,6 +263,15 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
                   {service.description || 'Sem descrição'}
                 </p>
                 <div className="flex space-x-2">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(service.id);
+                    }}
+                    className="p-2 bg-red-500/10 rounded-lg text-red-500 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();

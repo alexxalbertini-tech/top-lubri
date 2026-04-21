@@ -10,10 +10,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { cashFlow, addCashFlowEntry } = useFirebase();
+  const { cashFlow, addCashFlowEntry, deleteCashFlowEntry } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [entryType, setEntryType] = useState<'entry' | 'exit'>('entry');
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Deseja realmente excluir esta movimentação?")) return;
+    try {
+      await deleteCashFlowEntry(id);
+      toast.success('Movimentação removida com sucesso');
+    } catch (error) {
+      toast.error('Erro ao excluir movimentação');
+    }
+  };
 
   // Form state
   const [value, setValue] = useState('');
@@ -210,10 +220,19 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
                 <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest italic">{entry.paymentMethod} • {entry.date}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className={cn("text-sm font-black", entry.type === 'entry' ? "text-primary" : "text-red-400")}>
-                {entry.type === 'entry' ? '+' : '-'} R$ {entry.value.toLocaleString()}
-              </p>
+            <div className="flex items-center space-x-2">
+              <div className="text-right">
+                <p className={cn("text-sm font-black", entry.type === 'entry' ? "text-primary" : "text-red-400")}>
+                  {entry.type === 'entry' ? '+' : '-'} R$ {entry.value.toLocaleString()}
+                </p>
+              </div>
+              <button 
+                onClick={() => handleDelete(entry.id)}
+                className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
+                title="Excluir"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </PremiumCard>
         </div>

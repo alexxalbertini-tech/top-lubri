@@ -248,12 +248,23 @@ export function useFirebase() {
     }
   };
 
-  const addBudget = async (data: Omit<Budget, 'id' | 'userId'>) => {
-    const currentUser = auth.currentUser;
+  const addBudget = async (data: any) => {
+    const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
+      const laborValue = parseFloat(String(data.laborValue || data.maoDeObra)) || 0;
+      const partsValue = parseFloat(String(data.partsValue || data.pecas)) || 0;
+      const oilValue = parseFloat(String(data.oilValue || data.oleo)) || 0;
+      const totalValue = laborValue + partsValue + oilValue;
+
       return await addDoc(collection(db, 'orcamentos'), { 
         ...data, 
+        cliente: data.clientName || data.cliente,
+        servico: data.service || data.servico,
+        maoDeObra: laborValue,
+        pecas: partsValue,
+        oleo: oilValue,
+        total: totalValue,
         userId: currentUser.uid,
         createdAt: serverTimestamp()
       });
@@ -270,6 +281,28 @@ export function useFirebase() {
       await deleteDoc(doc(db, 'orcamentos', id));
     } catch (err) {
       handleFirestoreError(err, 'DELETE', `orcamentos/${id}`);
+      throw err;
+    }
+  };
+
+  const deleteService = async (id: string) => {
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
+    try {
+      await deleteDoc(doc(db, 'servicos', id));
+    } catch (err) {
+      handleFirestoreError(err, 'DELETE', `servicos/${id}`);
+      throw err;
+    }
+  };
+
+  const deleteCashFlowEntry = async (id: string) => {
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
+    try {
+      await deleteDoc(doc(db, 'caixa', id));
+    } catch (err) {
+      handleFirestoreError(err, 'DELETE', `caixa/${id}`);
       throw err;
     }
   };
@@ -315,7 +348,9 @@ export function useFirebase() {
     completeAppointment,
     deleteAppointment,
     addService,
+    deleteService,
     addCashFlowEntry,
+    deleteCashFlowEntry,
     addBudget,
     deleteBudget
   };

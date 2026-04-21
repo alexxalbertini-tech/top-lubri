@@ -120,96 +120,79 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     }
   };
 
-  const generatePDF = (budget: Budget) => {
+  const generatePDF = (dados: any) => {
+    const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
-    const dateStr = format(new Date(budget.date), 'dd/MM/yyyy HH:mm');
+
+    const total =
+      (Number(dados.maoDeObra) || 0) +
+      (Number(dados.pecas) || 0) +
+      (Number(dados.oleo) || 0);
 
     // Header
-    doc.setFontSize(20);
-    doc.setTextColor(0, 255, 136); // Primary Color
-    doc.text(profile?.companyName || 'TOP LUBRI PALMITAL', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(12);
+    doc.setFontSize(22);
+    doc.setTextColor(0, 255, 136);
+    doc.text("TOP LUBRI", 105, 25, { align: "center" });
+
+    doc.setFontSize(14);
     doc.setTextColor(100);
-    doc.text('ORÇAMENTO AUTOMOTIVO', 105, 28, { align: 'center' });
+    doc.text("ORÇAMENTO DE SERVIÇOS AUTOMOTIVOS", 105, 35, { align: "center" });
 
     doc.setDrawColor(200);
-    doc.line(10, 32, 200, 32);
+    doc.line(15, 40, 195, 40);
 
-    // Client Info
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(`Cliente: ${budget.clientName}`, 14, 40);
-    doc.text(`WhatsApp: ${budget.whatsapp}`, 14, 46);
-    doc.text(`Veículo: ${budget.vehicle}`, 120, 40);
-    doc.text(`Placa: ${budget.plate}`, 120, 46);
-    doc.text(`Data: ${dateStr}`, 14, 52);
-
-    let currentY = 60;
-
-    // Services Table
-    if (budget.services.length > 0) {
-      doc.setFontSize(11);
-      doc.text('SERVIÇOS (MÃO DE OBRA)', 14, currentY);
-      autoTable(doc, {
-        startY: currentY + 2,
-        head: [['Descrição', 'Valor (R$)']],
-        body: budget.services.map(s => [s.description, s.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })]),
-        theme: 'striped',
-        headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0] }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 10;
-    }
-
-    // Parts Table
-    if (budget.parts.length > 0) {
-      doc.setFontSize(11);
-      doc.text('PEÇAS E MATERIAIS', 14, currentY);
-      autoTable(doc, {
-        startY: currentY + 2,
-        head: [['Descrição', 'Qtd', 'V. Unit', 'Total']],
-        body: budget.parts.map(p => [
-          p.description, 
-          p.quantity, 
-          p.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 
-          p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        ]),
-        theme: 'striped',
-        headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0] }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 10;
-    }
-
-    // Totals
+    // Info
     doc.setFontSize(12);
-    doc.text(`Total Mão de Obra: R$ ${budget.totalLabor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY, { align: 'right' });
-    doc.text(`Total Peças/Materiais: R$ ${budget.totalParts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 6, { align: 'right' });
-    
-    doc.setFontSize(14);
-    doc.setTextColor(0, 180, 100);
-    doc.text(`TOTAL GERAL: R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 140, currentY + 16, { align: 'right' });
+    doc.setTextColor(0);
+    doc.text("Cliente: " + (dados.cliente || dados.clientName || "-"), 20, 55);
+    doc.text("WhatsApp: " + (dados.whatsapp || "-"), 20, 65);
+    doc.text("Veículo: " + (dados.veiculo || dados.vehicle || "-"), 20, 75);
 
-    doc.save(`orcamento_${budget.clientName.replace(/\s+/g, '_')}.pdf`);
+    doc.setFontSize(14);
+    doc.text("Descrição do Serviço:", 20, 95);
+    doc.setFontSize(12);
+    doc.text(dados.servico || dados.service || "-", 20, 105);
+
+    // Values
+    doc.setDrawColor(240);
+    doc.setFillColor(250);
+    doc.rect(15, 120, 180, 45, "F");
+
+    doc.text("Mão de obra: R$ " + (Number(dados.maoDeObra) || 0).toFixed(2), 25, 130);
+    doc.text("Peças: R$ " + (Number(dados.pecas) || 0).toFixed(2), 25, 140);
+    doc.text("Óleo: R$ " + (Number(dados.oleo) || 0).toFixed(2), 25, 150);
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 180, 100);
+    doc.text("TOTAL: R$ " + total.toFixed(2), 25, 175);
+
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    const dateStr = format(new Date(), 'dd/MM/yyyy HH:mm');
+    doc.text("Emitido em: " + dateStr, 20, 200);
+    doc.text("Top Lubri - Soluções em Lubrificação de Alta Performance", 105, 210, { align: "center" });
+
+    doc.save(`orcamento_${(dados.cliente || "top_lubri")}.pdf`);
   };
 
-  const shareOnWhatsApp = (budget: Budget) => {
-    const dateStr = format(new Date(budget.date), 'dd/MM/yyyy');
-    
-    // Professional ultra-formatted string
-    const servicesList = budget.services.map(s => `• ${s.description}`).join('\n');
-    const partsList = budget.parts.map(p => `• ${p.description} (x${p.quantity})`).join('\n');
-    
-    const text = `🛠️ *ORDEM DE SERVIÇO - TOP LUBRI* 🛠️\n\n` +
-                 `👤 *Cliente:* ${budget.clientName}\n` +
-                 `🚗 *Veículo:* ${budget.vehicle || 'Não informado'}\n` +
-                 `💰 *Total:* R$ ${budget.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-                 `📅 *Data:* ${dateStr}\n\n` +
-                 `✅ *Status:* Orçamento Disponível!\n` +
-                 `Obrigado pela preferência!`;
-    
-    const phone = budget.whatsapp.replace(/\D/g, '');
-    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+  const shareOnWhatsApp = (dados: any) => {
+    const total =
+      (Number(dados.maoDeObra) || 0) +
+      (Number(dados.pecas) || 0) +
+      (Number(dados.oleo) || 0);
+
+    const texto = 
+`🛠️ *ORÇAMENTO TOP LUBRI* 🛠️
+
+👤 *Cliente:* ${dados.cliente || dados.clientName}
+🔧 *Serviço:* ${dados.servico || dados.service}
+💰 *Total:* R$ ${total.toFixed(2)}
+
+_Emitido via Top Lubri Palmital_`;
+
+    const phone = (dados.whatsapp || '').replace(/\D/g, '');
+    const url = "https://wa.me/55" + phone + "?text=" + encodeURIComponent(texto);
+    window.open(url, "_blank");
   };
 
   const filteredBudgets = budgets.filter(b => 
