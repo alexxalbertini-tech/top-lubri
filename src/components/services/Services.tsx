@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion, AnimatePresence } from 'motion/react';
 
 export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { services, addService, deleteService } = useFirebase();
+  const { services, addService, deleteItem } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -90,10 +90,8 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente excluir este registro de serviço?")) return;
     try {
-      await deleteService(id);
-      toast.success('Serviço removido com sucesso');
+      await deleteItem('servicos', id);
     } catch (error) {
       toast.error('Erro ao excluir serviço');
     }

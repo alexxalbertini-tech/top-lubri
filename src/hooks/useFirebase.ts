@@ -124,9 +124,28 @@ export function useFirebase() {
       limit(50)
     );
     const unsubscribeBudgets = onSnapshot(qBudgets, (snap) => {
-      setBudgets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
+      setBudgets(snap.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          clientName: data.clientName || data.cliente || 'Cliente',
+          totalGeneral: Number(data.totalGeneral || data.total || 0),
+          date: data.date || (data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString())
+        } as Budget;
+      }));
       setLoading(false);
-    }, (err) => handleFirestoreError(err, 'LIST', 'orcamentos'));
+    }, (err) => {
+      console.warn('Firestore fallback mode for orcamentos');
+      const fallbackQuery = query(collection(db, 'orcamentos'), where('userId', '==', user.uid));
+      onSnapshot(fallbackQuery, (fallbackSnap) => {
+        setBudgets(fallbackSnap.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, clientName: data.clientName || data.cliente || 'Cliente' } as Budget;
+        }));
+        setLoading(false);
+      });
+    });
 
     return () => {
       unsubscribeAppointments();
@@ -252,19 +271,25 @@ export function useFirebase() {
     const currentUser = auth.currentUser || user;
     if (!currentUser) throw new Error('Usuário não autenticado');
     try {
-      const laborValue = parseFloat(String(data.laborValue || data.maoDeObra)) || 0;
-      const partsValue = parseFloat(String(data.partsValue || data.pecas)) || 0;
+      const laborValue = parseFloat(String(data.laborValue || data.maoDeObra || data.totalLabor)) || 0;
+      const partsValue = parseFloat(String(data.partsValue || data.pecas || data.totalParts)) || 0;
       const oilValue = parseFloat(String(data.oilValue || data.oleo)) || 0;
       const totalValue = laborValue + partsValue + oilValue;
 
+      // Concatenate services for the 'servico' legacy field if not provided
+      const serviceDescription = data.service || data.servico || (data.services && data.services.length > 0 
+        ? data.services.map((s: any) => s.description).join(', ') 
+        : '');
+
       return await addDoc(collection(db, 'orcamentos'), { 
         ...data, 
-        cliente: data.clientName || data.cliente,
-        servico: data.service || data.servico,
+        cliente: data.clientName || data.cliente || '',
+        servico: serviceDescription,
         maoDeObra: laborValue,
         pecas: partsValue,
         oleo: oilValue,
         total: totalValue,
+        totalGeneral: totalValue,
         userId: currentUser.uid,
         createdAt: serverTimestamp()
       });
@@ -303,6 +328,20 @@ export function useFirebase() {
       await deleteDoc(doc(db, 'caixa', id));
     } catch (err) {
       handleFirestoreError(err, 'DELETE', `caixa/${id}`);
+      throw err;
+    }
+  };
+
+  const deleteItem = async (collectionName: string, id: string) => {
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) throw new Error('Usuário não autenticado');
+    
+    if (!confirm("Deseja realmente excluir este registro?")) return;
+
+    try {
+      await deleteDoc(doc(db, collectionName, id));
+    } catch (err) {
+      handleFirestoreError(err, 'DELETE', `${collectionName}/${id}`);
       throw err;
     }
   };
@@ -352,6 +391,7 @@ export function useFirebase() {
     addCashFlowEntry,
     deleteCashFlowEntry,
     addBudget,
-    deleteBudget
+    deleteBudget,
+    deleteItem
   };
 }

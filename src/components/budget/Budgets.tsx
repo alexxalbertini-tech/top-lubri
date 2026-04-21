@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { budgets, addBudget, deleteBudget } = useFirebase();
+  const { budgets, addBudget, deleteItem } = useFirebase();
   const { profile } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -120,6 +120,14 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteItem('orcamentos', id);
+    } catch (error) {
+      toast.error('Erro ao excluir orçamento');
+    }
+  };
+
   const generatePDF = (dados: any) => {
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
@@ -129,50 +137,84 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
       (Number(dados.pecas) || 0) +
       (Number(dados.oleo) || 0);
 
-    // Header
+    // 🔥 Brand Header
     doc.setFontSize(22);
-    doc.setTextColor(0, 255, 136);
+    doc.setTextColor(0, 255, 136); // Primary Brand Color
     doc.text("TOP LUBRI", 105, 25, { align: "center" });
 
-    doc.setFontSize(14);
-    doc.setTextColor(100);
-    doc.text("ORÇAMENTO DE SERVIÇOS AUTOMOTIVOS", 105, 35, { align: "center" });
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 105, 32, { align: "center" });
 
     doc.setDrawColor(200);
     doc.line(15, 40, 195, 40);
 
-    // Info
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text("Cliente: " + (dados.cliente || dados.clientName || "-"), 20, 55);
-    doc.text("WhatsApp: " + (dados.whatsapp || "-"), 20, 65);
-    doc.text("Veículo: " + (dados.veiculo || dados.vehicle || "-"), 20, 75);
-
+    // Professional Header Information
     doc.setFontSize(14);
-    doc.text("Descrição do Serviço:", 20, 95);
-    doc.setFontSize(12);
-    doc.text(dados.servico || dados.service || "-", 20, 105);
-
-    // Values
-    doc.setDrawColor(240);
-    doc.setFillColor(250);
-    doc.rect(15, 120, 180, 45, "F");
-
-    doc.text("Mão de obra: R$ " + (Number(dados.maoDeObra) || 0).toFixed(2), 25, 130);
-    doc.text("Peças: R$ " + (Number(dados.pecas) || 0).toFixed(2), 25, 140);
-    doc.text("Óleo: R$ " + (Number(dados.oleo) || 0).toFixed(2), 25, 150);
-
-    doc.setFontSize(18);
-    doc.setTextColor(0, 180, 100);
-    doc.text("TOTAL: R$ " + total.toFixed(2), 25, 175);
+    doc.setTextColor(0);
+    doc.text("ORÇAMENTO DE SERVIÇOS", 20, 55);
 
     doc.setFontSize(10);
-    doc.setTextColor(150);
-    const dateStr = format(new Date(), 'dd/MM/yyyy HH:mm');
-    doc.text("Emitido em: " + dateStr, 20, 200);
-    doc.text("Top Lubri - Soluções em Lubrificação de Alta Performance", 105, 210, { align: "center" });
+    doc.setTextColor(100);
+    doc.text("Data: " + format(new Date(), 'dd/MM/yyyy HH:mm'), 150, 55);
 
-    doc.save(`orcamento_${(dados.cliente || "top_lubri")}.pdf`);
+    doc.setDrawColor(240);
+    doc.setFillColor(250);
+    doc.rect(15, 60, 180, 30, "F");
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.text("CLIENTE: " + (dados.cliente || dados.clientName || "-").toUpperCase(), 22, 72);
+    doc.text("WHATSAPP: " + (dados.whatsapp || "-"), 22, 82);
+    doc.text("VEÍCULO: " + (dados.veiculo || dados.vehicle || "-").toUpperCase(), 120, 72);
+    doc.text("PLACA: " + (dados.plate || "-").toUpperCase(), 120, 82);
+
+    // Service Description Table Header
+    doc.setFillColor(30, 30, 30);
+    doc.rect(15, 100, 180, 8, "F");
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.text("DESCRIÇÃO DO SERVIÇO / ITENS", 22, 106);
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    const serviceText = dados.servico || dados.service || "-";
+    const splitService = doc.splitTextToSize(serviceText, 170);
+    doc.text(splitService, 22, 118);
+
+    // Summary of Values
+    let currentY = 160;
+    doc.setDrawColor(0, 255, 136);
+    doc.setLineWidth(0.5);
+    doc.line(120, currentY, 195, currentY);
+
+    currentY += 10;
+    doc.setFontSize(11);
+    doc.text("MÃO DE OBRA:", 120, currentY);
+    doc.text("R$ " + (Number(dados.maoDeObra) || 0).toFixed(2), 195, currentY, { align: "right" });
+
+    currentY += 8;
+    doc.text("PEÇAS / MATERIAIS:", 120, currentY);
+    doc.text("R$ " + (Number(dados.pecas) || 0).toFixed(2), 195, currentY, { align: "right" });
+
+    currentY += 8;
+    doc.text("ÓLEO / LUBRIFICANTES:", 120, currentY);
+    doc.text("R$ " + (Number(dados.oleo) || 0).toFixed(2), 195, currentY, { align: "right" });
+
+    currentY += 15;
+    doc.setFillColor(0, 255, 136);
+    doc.rect(120, currentY - 7, 75, 10, "F");
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("TOTAL: R$ " + total.toFixed(2), 195, currentY, { align: "right" });
+
+    // Footer
+    currentY = 275;
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.text("Top Lubri - Palmital/SP - Telefone: (18) 99778-4303", 105, currentY, { align: "center" });
+
+    doc.save(`orcamento_${(dados.cliente || "top_lubri").replace(/\s+/g, '_')}.pdf`);
   };
 
   const shareOnWhatsApp = (dados: any) => {
@@ -238,7 +280,7 @@ _Emitido via Top Lubri Palmital_`;
                       </div>
                     </div>
                     <button 
-                      onClick={() => deleteBudget(budget.id)}
+                      onClick={() => handleDelete(budget.id)}
                       className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
                     >
                       <Trash className="w-4 h-4" />

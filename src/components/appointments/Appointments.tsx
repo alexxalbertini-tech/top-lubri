@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 
 export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { appointments, addAppointment, updateAppointment, completeAppointment, deleteAppointment } = useFirebase();
+  const { appointments, addAppointment, updateAppointment, completeAppointment, deleteItem } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -97,10 +97,8 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente excluir este agendamento?")) return;
     try {
-      await deleteAppointment(id);
-      toast.success('Agendamento removido com sucesso');
+      await deleteItem('agendamentos', id);
     } catch (error) {
       toast.error('Erro ao excluir agendamento');
     }

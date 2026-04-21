@@ -10,16 +10,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
-  const { cashFlow, addCashFlowEntry, deleteCashFlowEntry } = useFirebase();
+  const { cashFlow, addCashFlowEntry, deleteItem } = useFirebase();
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [entryType, setEntryType] = useState<'entry' | 'exit'>('entry');
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente excluir esta movimentação?")) return;
     try {
-      await deleteCashFlowEntry(id);
-      toast.success('Movimentação removida com sucesso');
+      await deleteItem('caixa', id);
     } catch (error) {
       toast.error('Erro ao excluir movimentação');
     }
