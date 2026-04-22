@@ -132,89 +132,109 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
 
-    const total =
-      (Number(dados.maoDeObra) || 0) +
-      (Number(dados.pecas) || 0) +
-      (Number(dados.oleo) || 0);
+    let y = 20;
 
-    // 🔥 Brand Header
-    doc.setFontSize(22);
-    doc.setTextColor(0, 255, 136); // Primary Brand Color
-    doc.text("TOP LUBRI", 105, 25, { align: "center" });
+    // 🔥 LOGO (Attempt to use a professional icon if image not present)
+    doc.setFillColor(0, 255, 136);
+    doc.rect(15, y, 12, 12, "F");
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.text("T", 18, y + 9);
 
-    doc.setFontSize(10);
-    doc.setTextColor(150);
-    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 105, 32, { align: "center" });
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.text("TOP LUBRI", 32, y + 6);
 
-    doc.setDrawColor(200);
-    doc.line(15, 40, 195, 40);
-
-    // Professional Header Information
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("ORÇAMENTO DE SERVIÇOS", 20, 55);
-
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(100);
-    doc.text("Data: " + format(new Date(), 'dd/MM/yyyy HH:mm'), 150, 55);
+    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 32, y + 11);
 
-    doc.setDrawColor(240);
-    doc.setFillColor(250);
-    doc.rect(15, 60, 180, 30, "F");
+    y += 20;
 
-    doc.setTextColor(0);
+    // 🔹 LINHA DIVISÓRIA
+    doc.setDrawColor(200);
+    doc.line(15, y, 195, y);
+    y += 10;
+
+    // 🔹 DADOS DO CLIENTE (Duas Colunas)
     doc.setFontSize(11);
-    doc.text("CLIENTE: " + (dados.cliente || dados.clientName || "-").toUpperCase(), 22, 72);
-    doc.text("WHATSAPP: " + (dados.whatsapp || "-"), 22, 82);
-    doc.text("VEÍCULO: " + (dados.veiculo || dados.vehicle || "-").toUpperCase(), 120, 72);
-    doc.text("PLACA: " + (dados.plate || "-").toUpperCase(), 120, 82);
+    doc.setTextColor(0);
+    doc.text("CLIENTE: " + (dados.cliente || dados.clientName || "-").toUpperCase(), 15, y);
+    doc.text("VEÍCULO: " + (dados.veiculo || dados.vehicle || "-").toUpperCase(), 110, y);
 
-    // Service Description Table Header
+    y += 8;
+    doc.text("WHATSAPP: " + (dados.whatsapp || "-"), 15, y);
+    doc.text("PLACA: " + (dados.placa || dados.plate || "-").toUpperCase(), 110, y);
+
+    y += 15;
+
+    // 🔥 TABELA DE SERVIÇOS (Cabeçalho)
     doc.setFillColor(30, 30, 30);
-    doc.rect(15, 100, 180, 8, "F");
+    doc.rect(15, y, 180, 8, "F");
+
     doc.setTextColor(255);
     doc.setFontSize(10);
-    doc.text("DESCRIÇÃO DO SERVIÇO / ITENS", 22, 106);
+    doc.text("DESCRIÇÃO DOS SERVIÇOS / PRODUTOS", 18, y + 5);
+    doc.text("VALOR (R$)", 170, y + 5);
 
     doc.setTextColor(0);
-    doc.setFontSize(11);
-    const serviceText = dados.servico || dados.service || "-";
-    const splitService = doc.splitTextToSize(serviceText, 170);
-    doc.text(splitService, 22, 118);
+    y += 15;
 
-    // Summary of Values
-    let currentY = 160;
+    // 🔹 ITENS DETALHADOS
+    let subtotal = 0;
+
+    const renderItem = (nome: string, valor: number) => {
+      if (!valor || valor <= 0) return;
+      doc.setFontSize(10);
+      doc.text(nome, 15, y);
+      doc.text(valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 190, y, { align: "right" });
+      subtotal += valor;
+      y += 8;
+    };
+
+    renderItem("Mão de Obra / Serviços", Number(dados.maoDeObra || dados.totalLabor || 0));
+    renderItem("Peças / Materiais", Number(dados.pecas || dados.totalParts || 0));
+    renderItem("Óleo / Lubrificantes", Number(dados.oleo || 0));
+
+    // Fallback item description if specified
+    if (dados.servico || dados.service) {
+      y += 2;
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      const serviceText = dados.servico || dados.service;
+      const splitText = doc.splitTextToSize("Detalhes: " + serviceText, 170);
+      doc.text(splitText, 15, y);
+      y += (splitText.length * 5) + 5;
+    }
+
+    y += 10;
+
+    // 🔹 LINHA FINAL
     doc.setDrawColor(0, 255, 136);
     doc.setLineWidth(0.5);
-    doc.line(120, currentY, 195, currentY);
+    doc.line(15, y, 195, y);
+    y += 12;
 
-    currentY += 10;
-    doc.setFontSize(11);
-    doc.text("MÃO DE OBRA:", 120, currentY);
-    doc.text("R$ " + (Number(dados.maoDeObra) || 0).toFixed(2), 195, currentY, { align: "right" });
-
-    currentY += 8;
-    doc.text("PEÇAS / MATERIAIS:", 120, currentY);
-    doc.text("R$ " + (Number(dados.pecas) || 0).toFixed(2), 195, currentY, { align: "right" });
-
-    currentY += 8;
-    doc.text("ÓLEO / LUBRIFICANTES:", 120, currentY);
-    doc.text("R$ " + (Number(dados.oleo) || 0).toFixed(2), 195, currentY, { align: "right" });
-
-    currentY += 15;
-    doc.setFillColor(0, 255, 136);
-    doc.rect(120, currentY - 7, 75, 10, "F");
+    // 🔥 TOTAL EM DESTAQUE
     doc.setFontSize(14);
+    doc.setFillColor(0, 255, 136);
+    doc.rect(120, y - 7, 75, 10, "F");
+
     doc.setTextColor(0);
-    doc.text("TOTAL: R$ " + total.toFixed(2), 195, currentY, { align: "right" });
+    doc.setFontSize(12);
+    doc.text("TOTAL GERAL:  R$ " + subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 125, y);
 
-    // Footer
-    currentY = 275;
+    doc.setTextColor(100);
     doc.setFontSize(9);
-    doc.setTextColor(150);
-    doc.text("Top Lubri - Palmital/SP - Telefone: (18) 99778-4303", 105, currentY, { align: "center" });
+    y += 25;
 
-    doc.save(`orcamento_${(dados.cliente || "top_lubri").replace(/\s+/g, '_')}.pdf`);
+    // 🔹 RODAPÉ
+    doc.text("________________________________________________", 105, y, { align: "center" });
+    y += 8;
+    doc.text("Top Lubri - Palmital/SP - Telefone: (18) 99778-4303", 105, y, { align: "center" });
+    doc.text("Obrigado pela preferência!", 105, y + 6, { align: "center" });
+
+    doc.save(`OS_${(dados.cliente || dados.clientName || "TopLubri").replace(/\s+/g, '_')}.pdf`);
   };
 
   const shareOnWhatsApp = (dados: any) => {
