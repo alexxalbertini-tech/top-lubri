@@ -129,7 +129,6 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
   };
 
   const generatePDF = (dados: any) => {
-    const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
 
     let y = 20;
