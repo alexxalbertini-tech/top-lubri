@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { BudgetItem, Budget } from '@/types';
+import { BudgetItem, Budget, LaborItem, PartItem } from '@/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -46,24 +46,20 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
   const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão'>('Pix');
   const [discount, setDiscount] = useState('0');
   
-  const [items, setItems] = useState<Omit<BudgetItem, 'id'>[]>([
-    { description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }
-  ]);
+  // Split state for new requirements
+  const [laborItems, setLaborItems] = useState<LaborItem[]>([{ descricao: '', valor: 0 }]);
+  const [partsItems, setPartsItems] = useState<PartItem[]>([{ nome: '', quantidade: 1, valorUnitario: 0, total: 0 }]);
 
   // Calculations
   const totalLabor = useMemo(() => 
-    items.filter(i => i.type === 'Serviço').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
-  , [items]);
+    laborItems.reduce((acc, i) => acc + (Number(i.valor) || 0), 0)
+  , [laborItems]);
   
   const totalParts = useMemo(() => 
-    items.filter(i => i.type === 'Peça').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
-  , [items]);
+    partsItems.reduce((acc, i) => acc + (Number(i.total) || 0), 0)
+  , [partsItems]);
 
-  const totalOil = useMemo(() => 
-    items.filter(i => i.type === 'Óleo').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
-  , [items]);
-
-  const subtotal = totalLabor + totalParts + totalOil;
+  const subtotal = totalLabor + totalParts;
   const totalGeneral = subtotal - (parseFloat(discount) || 0);
 
   const resetForm = () => {
@@ -74,29 +70,43 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     setDescriptionServico('');
     setPaymentMethod('Pix');
     setDiscount('0');
-    setItems([{ description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }]);
+    setLaborItems([{ descricao: '', valor: 0 }]);
+    setPartsItems([{ nome: '', quantidade: 1, valorUnitario: 0, total: 0 }]);
   };
 
-  const addItem = () => {
-    setItems([...items, { description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }]);
+  const addLaborItem = () => {
+    setLaborItems([...laborItems, { descricao: '', valor: 0 }]);
   };
 
-  const updateItem = (index: number, field: keyof Omit<BudgetItem, 'id'>, value: any) => {
-    const newItems = [...items];
-    (newItems[index] as any)[field] = value;
+  const updateLaborItem = (index: number, field: keyof LaborItem, value: any) => {
+    const newList = [...laborItems];
+    (newList[index] as any)[field] = value;
+    setLaborItems(newList);
+  };
+
+  const removeLaborItem = (index: number) => {
+    setLaborItems(laborItems.filter((_, i) => i !== index));
+  };
+
+  const addPartItem = () => {
+    setPartsItems([...partsItems, { nome: '', quantidade: 1, valorUnitario: 0, total: 0 }]);
+  };
+
+  const updatePartItem = (index: number, field: keyof PartItem, value: any) => {
+    const newList = [...partsItems];
+    (newList[index] as any)[field] = value;
     
-    // Auto calculate total for item
-    if (field === 'quantity' || field === 'unitValue') {
-      const q = parseFloat(String(field === 'quantity' ? value : newItems[index].quantity)) || 0;
-      const v = parseFloat(String(field === 'unitValue' ? value : newItems[index].unitValue)) || 0;
-      newItems[index].total = q * v;
+    if (field === 'quantidade' || field === 'valorUnitario') {
+      const q = parseFloat(String(field === 'quantidade' ? value : newList[index].quantidade)) || 0;
+      const v = parseFloat(String(field === 'valorUnitario' ? value : newList[index].valorUnitario)) || 0;
+      newList[index].total = q * v;
     }
     
-    setItems(newItems);
+    setPartsItems(newList);
   };
 
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const removePartItem = (index: number) => {
+    setPartsItems(partsItems.filter((_, i) => i !== index));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -117,41 +127,31 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
         descriptionServico,
         paymentMethod,
         discount: parseFloat(discount) || 0,
-        items: items.filter(i => i.description).map(i => ({
-          ...i,
-          quantity: parseFloat(String(i.quantity)) || 0,
-          unitValue: parseFloat(String(i.unitValue)) || 0,
-          total: (parseFloat(String(i.quantity)) || 0) * (parseFloat(String(i.unitValue)) || 0)
-        })),
+        // New structure requested
+        lista_mao_obra: laborItems.filter(i => i.descricao),
+        lista_pecas: partsItems.filter(i => i.nome),
+        // For compatibility with cards while existing
+        items: [
+          ...laborItems.filter(i => i.descricao).map(i => ({ description: i.descricao, type: 'Serviço' as const, quantity: 1, unitValue: i.valor, total: i.valor })),
+          ...partsItems.filter(i => i.nome).map(i => ({ description: i.nome, type: 'Peça' as const, quantity: i.quantidade, unitValue: i.valorUnitario, total: i.total }))
+        ],
         totalLabor,
         totalParts,
-        totalOil,
+        totalOil: 0,
         totalGeneral,
         date: new Date().toISOString(),
         status: 'draft' as const
       };
 
-      // 1. Await database operation fully
       await addBudget(budgetData);
-
-      // 2. Success Feedback
       alert('Orçamento salvo com sucesso!');
-      
-      // 3. Reset and Close flow (PROFESSIONAL)
       resetForm();
       setIsAdding(false);
-      
-      // 4. Update Tab
       if (setActiveTab) setActiveTab('dashboard');
-
-      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-
+      setTimeout(() => { window.location.href = "/"; }, 500);
     } catch (error) {
       console.error('ERRO AO SALVAR ORÇAMENTO:', error);
-      toast.error('Erro ao salvar orçamento. Verifique sua conexão.');
+      toast.error('Erro ao salvar orçamento.');
     } finally {
       setIsSaving(false);
     }
@@ -167,168 +167,152 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
 
   const generatePDF = (dados: any) => {
     const doc = new jsPDF();
-    const primaryColor = [0, 255, 136]; // #00ff88
-    
-    // Helper for formatting currency
     const fmt = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // 1. CABEÇALHO PROFISSIONAL
-    // Logo Placeholder (Circle with T)
-    doc.setFillColor(0, 255, 136);
-    doc.circle(25, 25, 12, 'F');
+    doc.setFillColor(0, 255, 136); // #00ff88
+    doc.rect(0, 0, 210, 40, 'F');
+    
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(22);
+    doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.text("T", 21, 33);
+    doc.text("TOP LUBRI", 15, 25);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 15, 32);
 
-    // Company Name & Subtitle
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    doc.text("Palmital - SP | (18) 99778-4303", 195, 25, { align: 'right' });
+    doc.text("Oficina de Alta Performance", 195, 32, { align: 'right' });
+
+    // 2. INFORMAÇÕES DO DOCUMENTO
+    let y = 50;
     doc.setTextColor(40, 40, 40);
-    doc.setFontSize(24);
-    doc.text("TOP LUBRI", 45, 28);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ORDEM DE SERVIÇO / ORÇAMENTO", 15, y);
+    
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
-    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 45, 34);
-
-    // Company Data (Right Aligned)
-    doc.setFontSize(9);
-    doc.text("Palmital - SP", 195, 22, { align: 'right' });
-    doc.text("Telefone: (18) 99778-4303", 195, 27, { align: 'right' });
-    doc.text("CNPJ: 00.000.000/0001-00", 195, 32, { align: 'right' });
-
-    doc.setDrawColor(230, 230, 230);
-    doc.line(15, 42, 195, 42);
-
-    // 2. INFORMAÇÕES DO DOCUMENTO
-    let y = 52;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("ORDEM DE SERVIÇO", 15, y);
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    const osNumber = dados.id || Date.now().toString().slice(-6);
-    doc.text(`Nº: ${osNumber}`, 195, y, { align: 'right' });
+    doc.text(`Nº: ${dados.id?.slice(-6) || Date.now().toString().slice(-6)}`, 195, y, { align: 'right' });
     y += 6;
-    doc.text(`Data/Hora: ${format(new Date(dados.date || new Date()), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 195, y, { align: 'right' });
+    doc.text(`Data: ${format(new Date(dados.date || new Date()), "dd/MM/yyyy HH:mm")}`, 195, y, { align: 'right' });
 
-    y += 12;
+    y += 15;
 
-    // 3 & 4. DADOS DO CLIENTE E VEÍCULO
-    doc.setFillColor(245, 245, 245);
-    doc.rect(15, y, 180, 22, 'F');
+    // 3. DADOS DO CLIENTE E VEÍCULO (2 COLUNAS)
+    doc.setDrawColor(240, 240, 240);
+    doc.setFillColor(250, 250, 250);
+    doc.rect(15, y, 180, 25, 'F');
     
     doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(100, 100, 100);
     doc.setFont("helvetica", "bold");
     doc.text("DADOS DO CLIENTE", 20, y + 8);
     doc.text("DADOS DO VEÍCULO", 110, y + 8);
     
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 40, 40);
-    doc.text(`Nome: ${dados.clientName || '-'}`, 20, y + 14);
-    doc.text(`WhatsApp: ${dados.whatsapp || '-'}`, 20, y + 19);
+    doc.text(`Nome: ${dados.clientName || '-'}`, 20, y + 15);
+    doc.text(`WhatsApp: ${dados.whatsapp || '-'}`, 20, y + 20);
     
-    doc.text(`Veículo: ${dados.vehicle || '-'}`, 110, y + 14);
-    doc.text(`Placa: ${(dados.plate || '-').toUpperCase()}`, 110, y + 19);
+    doc.text(`Veículo: ${dados.vehicle || '-'}`, 110, y + 15);
+    doc.text(`Placa: ${(dados.plate || '-').toUpperCase()}`, 110, y + 20);
 
-    y += 32;
+    y += 35;
 
-    // 5. TABELA PROFISSIONAL DE ITENS
-    const tableItems = (dados.items || []).map((item: any, index: number) => [
-      index + 1,
-      item.description,
-      item.type,
-      item.quantity,
-      `R$ ${fmt(item.unitValue)}`,
-      `R$ ${fmt(item.total)}`
-    ]);
-
-    autoTable(doc, {
-      startY: y,
-      head: [['ITEM', 'DESCRIÇÃO', 'TIPO', 'QTD', 'VALOR UNIT', 'TOTAL']],
-      body: tableItems,
-      theme: 'striped',
-      headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: {
-        0: { cellWidth: 12 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 12 },
-        4: { cellWidth: 30, halign: 'right' },
-        5: { cellWidth: 30, halign: 'right' }
-      }
-    });
-
-    y = (doc as any).lastAutoTable.finalY + 10;
-
-    // 6. DETALHES DO SERVIÇO
-    if (dados.descriptionServico) {
+    // 4. TABELA DE MÃO DE OBRA
+    const maoObra = dados.lista_mao_obra || (dados.items || []).filter((i: any) => i.type === 'Serviço').map((i: any) => ({ descricao: i.description, valor: i.unitValue }));
+    
+    if (maoObra.length > 0) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text("OBSERVAÇÕES / DETALHES DO SERVIÇO:", 15, y);
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text("MÃO DE OBRA / SERVIÇOS", 15, y);
       y += 5;
-      doc.setFont("helvetica", "normal");
-      const splitDesc = doc.splitTextToSize(dados.descriptionServico, 180);
-      doc.text(splitDesc, 15, y);
-      y += (splitDesc.length * 5) + 10;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['DESCRIÇÃO DO SERVIÇO', 'VALOR (R$)']],
+        body: maoObra.map((i: any) => [i.descricao, fmt(i.valor)]),
+        theme: 'striped',
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 },
+        columnStyles: { 1: { halign: 'right', cellWidth: 40 } }
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
     }
 
-    // 7. RESUMO FINANCEIRO
+    // 5. TABELA DE PEÇAS
+    const pecas = dados.lista_pecas || (dados.items || []).filter((i: any) => i.type === 'Peça' || i.type === 'Óleo').map((i: any) => ({ nome: i.description, quantidade: i.quantity, valorUnitario: i.unitValue, total: i.total }));
+
+    if (pecas.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text("PEÇAS E MATERIAIS", 15, y);
+      y += 5;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['PEÇA / PRODUTO', 'QTD', 'VALOR UN.', 'TOTAL (R$)']],
+        body: pecas.map((i: any) => [i.nome, i.quantidade, fmt(i.valorUnitario), fmt(i.total)]),
+        theme: 'striped',
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 },
+        columnStyles: { 
+          1: { halign: 'center', cellWidth: 20 }, 
+          2: { halign: 'right', cellWidth: 35 }, 
+          3: { halign: 'right', cellWidth: 35 } 
+        }
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+
+    // 6. RESUMO FINANCEIRO
     const summaryX = 130;
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     
-    const drawRow = (label: string, value: number, isTotal = false) => {
-      doc.setFont("helvetica", isTotal ? "bold" : "normal");
-      doc.text(label, summaryX, y);
-      doc.text(`R$ ${fmt(value)}`, 195, y, { align: 'right' });
-      y += 6;
-    };
+    doc.text("Subtotal Mão de Obra:", summaryX, y);
+    doc.text(`R$ ${fmt(dados.totalLabor || 0)}`, 195, y, { align: 'right' });
+    y += 6;
 
-    drawRow("Total em Serviços:", dados.totalLabor || 0);
-    drawRow("Total em Peças:", dados.totalParts || 0);
-    drawRow("Total em Óleo:", dados.totalOil || 0);
+    doc.text("Subtotal Peças:", summaryX, y);
+    doc.text(`R$ ${fmt(dados.totalParts || 0)}`, 195, y, { align: 'right' });
+    y += 6;
+
     if (dados.discount > 0) {
-      doc.setTextColor(220, 0, 0);
-      drawRow("Desconto:", -dados.discount);
-      doc.setTextColor(100, 100, 100);
+      doc.setTextColor(200, 0, 0);
+      doc.text("Desconto:", summaryX, y);
+      doc.text(`- R$ ${fmt(dados.discount)}`, 195, y, { align: 'right' });
+      y += 6;
     }
 
     y += 2;
-    // Highlight Total Box
     doc.setFillColor(0, 255, 136);
-    doc.rect(summaryX - 5, y - 5, 70, 10, 'F');
+    doc.rect(summaryX - 5, y - 5, 70, 12, 'F');
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("TOTAL FINAL:", summaryX, y + 2);
-    doc.text(`R$ ${fmt(dados.totalGeneral || 0)}`, 195, y + 2, { align: 'right' });
+    doc.text("TOTAL GERAL:", summaryX, y + 3);
+    doc.text(`R$ ${fmt(dados.totalGeneral || 0)}`, 195, y + 3, { align: 'right' });
 
-    y += 15;
+    y += 20;
 
-    // 8. FORMA DE PAGAMENTO
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`FORMA DE PAGAMENTO: ${dados.paymentMethod || 'Não informado'}`, 15, y);
-
-    y += 25;
-
-    // 9. RODAPÉ PROFISSIONAL
+    // 7. RODAPÉ
+    doc.setTextColor(150, 150, 150);
     doc.setFontSize(8);
+    doc.text("Top Lubri - Oficina Automotiva", 105, y, { align: 'center' });
+    y += 5;
+    doc.text("Palmital-SP | Contato: (18) 99778-4303", 105, y, { align: 'center' });
+    y += 5;
     doc.text("Obrigado pela preferência!", 105, y, { align: 'center' });
-    y += 5;
-    doc.text("TOP LUBRI - (18) 99778-4303", 105, y, { align: 'center' });
-    
-    y += 15;
-    doc.setDrawColor(180, 180, 180);
-    doc.line(65, y, 145, y);
-    y += 5;
-    doc.text("Assinatura do Cliente", 105, y, { align: 'center' });
 
-    doc.save(`OS_${(dados.clientName || "Cliente").replace(/\s+/g, '_')}.pdf`);
+    doc.save(`OS_TOPLUBRI_${dados.clientName?.replace(/\s+/g, '_')}.pdf`);
   };
 
   const shareOnWhatsApp = (dados: any) => {
@@ -402,18 +386,14 @@ _Emitido via Top Lubri Palmital_`;
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="grid grid-cols-2 gap-3 mb-6">
                     <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Mão de Obra</p>
                       <p className="text-xs font-black text-white">R$ {(budget.totalLabor || 0).toLocaleString('pt-BR')}</p>
                     </div>
                     <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
-                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças</p>
-                      <p className="text-xs font-black text-white">R$ {(budget.totalParts || 0).toLocaleString('pt-BR')}</p>
-                    </div>
-                    <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
-                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Óleo</p>
-                      <p className="text-xs font-black text-white">R$ {(budget.totalOil || 0).toLocaleString('pt-BR')}</p>
+                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças e Materiais</p>
+                      <p className="text-xs font-black text-white">R$ {((budget.totalParts || 0) + (budget.totalOil || 0)).toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
 
@@ -479,80 +459,118 @@ _Emitido via Top Lubri Palmital_`;
               </div>
             </PremiumCard>
 
-            {/* Itens da OS Section */}
+            {/* 1. MÃO DE OBRA */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <ClipboardList className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Itens da Ordem de Serviço</h4>
+                  <Wrench className="w-4 h-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">1. Mão de Obra / Serviços</h4>
                 </div>
                 <button 
                   type="button" 
-                  onClick={addItem}
+                  onClick={addLaborItem}
                   className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
                 >
-                  <Plus className="w-3 h-3 mr-2" /> Adicionar Item
+                  <Plus className="w-3 h-3 mr-2" /> Outra Mão de Obra
                 </button>
               </div>
               
-              <div className="space-y-4">
-                {items.map((item, idx) => (
+              <div className="space-y-3">
+                {laborItems.map((item, idx) => (
+                  <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-white/5 flex items-end gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Descrição do Serviço</Label>
+                      <Input 
+                        placeholder="Ex: Troca de Buchas" 
+                        value={item.descricao} 
+                        onChange={e => updateLaborItem(idx, 'descricao', e.target.value)}
+                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+                      />
+                    </div>
+                    <div className="w-32 space-y-1.5">
+                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Valor (R$)</Label>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        value={item.valor} 
+                        onChange={e => updateLaborItem(idx, 'valor', e.target.value)}
+                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+                      />
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => removeLaborItem(idx)}
+                      className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. PEÇAS */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Package className="w-4 h-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">2. Peças e Materiais</h4>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={addPartItem}
+                  className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
+                >
+                  <Plus className="w-3 h-3 mr-2" /> Outra Peça
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {partsItems.map((item, idx) => (
                   <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-white/5 space-y-4">
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <div className="flex-1 space-y-1.5">
-                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Descrição do Item</Label>
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Nome da Peça</Label>
                         <Input 
-                          placeholder="Ex: Troca de Óleo 5W30" 
-                          value={item.description} 
-                          onChange={e => updateItem(idx, 'description', e.target.value)}
-                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                          placeholder="Ex: Amortecedor Dianteiro" 
+                          value={item.nome} 
+                          onChange={e => updatePartItem(idx, 'nome', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
                         />
-                      </div>
-                      <div className="w-24 space-y-1.5">
-                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Tipo</Label>
-                        <select 
-                          value={item.type}
-                          onChange={e => updateItem(idx, 'type', e.target.value as any)}
-                          className="w-full h-10 bg-zinc-800/50 border border-zinc-700 rounded-xl px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="Serviço">Serviço</option>
-                          <option value="Peça">Peça</option>
-                          <option value="Óleo">Óleo</option>
-                        </select>
                       </div>
                       <button 
                         type="button" 
-                        onClick={() => removeItem(idx)}
-                        className="mt-6 p-2 text-red-500 hover:bg-red-500/10 rounded-lg h-10"
+                        onClick={() => removePartItem(idx)}
+                        className="mt-6 p-3 text-red-500 hover:bg-red-500/10 rounded-xl"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Quantidade</Label>
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Qtd</Label>
                         <Input 
                           type="number"
                           step="any"
-                          value={item.quantity} 
-                          onChange={e => updateItem(idx, 'quantity', e.target.value)}
-                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                          value={item.quantidade} 
+                          onChange={e => updatePartItem(idx, 'quantidade', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12 text-center" 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[8px] uppercase font-bold text-zinc-500">V. Unitário (R$)</Label>
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">V. Unitário</Label>
                         <Input 
                           type="number"
                           step="0.01"
-                          value={item.unitValue} 
-                          onChange={e => updateItem(idx, 'unitValue', e.target.value)}
-                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                          value={item.valorUnitario} 
+                          onChange={e => updatePartItem(idx, 'valorUnitario', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12 text-right" 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Subtotal</Label>
-                        <div className="h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center px-4 font-black text-xs text-primary">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Total Peça</Label>
+                        <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-end px-4 font-black text-xs text-primary">
                           R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                       </div>

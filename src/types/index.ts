@@ -50,6 +50,18 @@ export interface AppSettings {
   logoUrl?: string;
 }
 
+export interface LaborItem {
+  descricao: string;
+  valor: number;
+}
+
+export interface PartItem {
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  total: number;
+}
+
 export interface BudgetItem {
   id: string;
   description: string;
@@ -66,7 +78,9 @@ export interface Budget {
   whatsapp: string;
   vehicle: string;
   plate: string;
-  items: BudgetItem[];
+  items: BudgetItem[]; // Keep for compatibility
+  lista_mao_obra?: LaborItem[];
+  lista_pecas?: PartItem[];
   descriptionServico: string;
   paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
   discount: number;
