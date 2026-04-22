@@ -51,7 +51,9 @@ export interface AppSettings {
 }
 
 export interface BudgetItem {
+  id: string;
   description: string;
+  type: 'Serviço' | 'Peça' | 'Óleo';
   quantity: number;
   unitValue: number;
   total: number;
@@ -64,10 +66,13 @@ export interface Budget {
   whatsapp: string;
   vehicle: string;
   plate: string;
-  services: { description: string; value: number }[];
-  parts: BudgetItem[];
+  items: BudgetItem[];
+  descriptionServico: string;
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  discount: number;
   totalLabor: number;
   totalParts: number;
+  totalOil: number;
   totalGeneral: number;
   date: string;
   status: 'draft' | 'sent' | 'approved';

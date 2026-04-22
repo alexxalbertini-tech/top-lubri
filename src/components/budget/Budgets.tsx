@@ -19,7 +19,8 @@ import {
   ChevronUp,
   Search,
   CheckCircle2,
-  Trash
+  Trash,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
@@ -41,28 +42,61 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
   const [whatsapp, setWhatsapp] = useState('');
   const [vehicle, setVehicle] = useState('');
   const [plate, setPlate] = useState('');
+  const [descriptionServico, setDescriptionServico] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão'>('Pix');
+  const [discount, setDiscount] = useState('0');
   
-  const [services, setServices] = useState<{ description: string; value: string }[]>([{ description: '', value: '' }]);
-  const [parts, setParts] = useState<{ description: string; quantity: string; unitValue: string }[]>([{ description: '', quantity: '', unitValue: '' }]);
+  const [items, setItems] = useState<Omit<BudgetItem, 'id'>[]>([
+    { description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }
+  ]);
 
   // Calculations
-  const totalLabor = useMemo(() => services.reduce((acc, s) => acc + (parseFloat(s.value) || 0), 0), [services]);
+  const totalLabor = useMemo(() => 
+    items.filter(i => i.type === 'Serviço').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
+  , [items]);
   
-  const totalParts = useMemo(() => parts.reduce((acc, p) => {
-    const q = parseFloat(p.quantity) || 0;
-    const v = parseFloat(p.unitValue) || 0;
-    return acc + (q * v);
-  }, 0), [parts]);
+  const totalParts = useMemo(() => 
+    items.filter(i => i.type === 'Peça').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
+  , [items]);
 
-  const totalGeneral = totalLabor + totalParts;
+  const totalOil = useMemo(() => 
+    items.filter(i => i.type === 'Óleo').reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitValue) || 0), 0)
+  , [items]);
+
+  const subtotal = totalLabor + totalParts + totalOil;
+  const totalGeneral = subtotal - (parseFloat(discount) || 0);
 
   const resetForm = () => {
     setClientName('');
     setWhatsapp('');
     setVehicle('');
     setPlate('');
-    setServices([{ description: '', value: '' }]);
-    setParts([{ description: '', quantity: '', unitValue: '' }]);
+    setDescriptionServico('');
+    setPaymentMethod('Pix');
+    setDiscount('0');
+    setItems([{ description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }]);
+  };
+
+  const addItem = () => {
+    setItems([...items, { description: '', type: 'Serviço', quantity: 1, unitValue: 0, total: 0 }]);
+  };
+
+  const updateItem = (index: number, field: keyof Omit<BudgetItem, 'id'>, value: any) => {
+    const newItems = [...items];
+    (newItems[index] as any)[field] = value;
+    
+    // Auto calculate total for item
+    if (field === 'quantity' || field === 'unitValue') {
+      const q = parseFloat(String(field === 'quantity' ? value : newItems[index].quantity)) || 0;
+      const v = parseFloat(String(field === 'unitValue' ? value : newItems[index].unitValue)) || 0;
+      newItems[index].total = q * v;
+    }
+    
+    setItems(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -80,15 +114,18 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
         whatsapp,
         vehicle,
         plate,
-        services: services.filter(s => s.description).map(s => ({ description: s.description, value: parseFloat(s.value) || 0 })),
-        parts: parts.filter(p => p.description).map(p => ({
-          description: p.description,
-          quantity: parseFloat(p.quantity) || 0,
-          unitValue: parseFloat(p.unitValue) || 0,
-          total: (parseFloat(p.quantity) || 0) * (parseFloat(p.unitValue) || 0)
+        descriptionServico,
+        paymentMethod,
+        discount: parseFloat(discount) || 0,
+        items: items.filter(i => i.description).map(i => ({
+          ...i,
+          quantity: parseFloat(String(i.quantity)) || 0,
+          unitValue: parseFloat(String(i.unitValue)) || 0,
+          total: (parseFloat(String(i.quantity)) || 0) * (parseFloat(String(i.unitValue)) || 0)
         })),
         totalLabor,
         totalParts,
+        totalOil,
         totalGeneral,
         date: new Date().toISOString(),
         status: 'draft' as const
@@ -130,129 +167,185 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
 
   const generatePDF = (dados: any) => {
     const doc = new jsPDF();
+    const primaryColor = [0, 255, 136]; // #00ff88
+    
+    // Helper for formatting currency
+    const fmt = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    let y = 20;
-
-    // 🔥 LOGO (Attempt to use a professional icon if image not present)
+    // 1. CABEÇALHO PROFISSIONAL
+    // Logo Placeholder (Circle with T)
     doc.setFillColor(0, 255, 136);
-    doc.rect(15, y, 12, 12, "F");
-    doc.setFontSize(20);
+    doc.circle(25, 25, 12, 'F');
     doc.setTextColor(0, 0, 0);
-    doc.text("T", 18, y + 9);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("T", 21, 33);
 
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
-    doc.text("TOP LUBRI", 32, y + 6);
-
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 32, y + 11);
-
-    y += 20;
-
-    // 🔹 LINHA DIVISÓRIA
-    doc.setDrawColor(200);
-    doc.line(15, y, 195, y);
-    y += 10;
-
-    // 🔹 DADOS DO CLIENTE (Duas Colunas)
-    doc.setFontSize(11);
-    doc.setTextColor(0);
-    doc.text("CLIENTE: " + (dados.cliente || dados.clientName || "-").toUpperCase(), 15, y);
-    doc.text("VEÍCULO: " + (dados.veiculo || dados.vehicle || "-").toUpperCase(), 110, y);
-
-    y += 8;
-    doc.text("WHATSAPP: " + (dados.whatsapp || "-"), 15, y);
-    doc.text("PLACA: " + (dados.placa || dados.plate || "-").toUpperCase(), 110, y);
-
-    y += 15;
-
-    // 🔥 TABELA DE SERVIÇOS (Cabeçalho)
-    doc.setFillColor(30, 30, 30);
-    doc.rect(15, y, 180, 8, "F");
-
-    doc.setTextColor(255);
+    // Company Name & Subtitle
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(24);
+    doc.text("TOP LUBRI", 45, 28);
     doc.setFontSize(10);
-    doc.text("DESCRIÇÃO DOS SERVIÇOS / PRODUTOS", 18, y + 5);
-    doc.text("VALOR (R$)", 170, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text("SOLUÇÕES AUTOMOTIVAS & LUBRIFICAÇÃO", 45, 34);
 
-    doc.setTextColor(0);
-    y += 15;
+    // Company Data (Right Aligned)
+    doc.setFontSize(9);
+    doc.text("Palmital - SP", 195, 22, { align: 'right' });
+    doc.text("Telefone: (18) 99778-4303", 195, 27, { align: 'right' });
+    doc.text("CNPJ: 00.000.000/0001-00", 195, 32, { align: 'right' });
 
-    // 🔹 ITENS DETALHADOS
-    let subtotal = 0;
+    doc.setDrawColor(230, 230, 230);
+    doc.line(15, 42, 195, 42);
 
-    const renderItem = (nome: string, valor: number) => {
-      if (!valor || valor <= 0) return;
-      doc.setFontSize(10);
-      doc.text(nome, 15, y);
-      doc.text(valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 190, y, { align: "right" });
-      subtotal += valor;
-      y += 8;
-    };
+    // 2. INFORMAÇÕES DO DOCUMENTO
+    let y = 52;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("ORDEM DE SERVIÇO", 15, y);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    const osNumber = dados.id || Date.now().toString().slice(-6);
+    doc.text(`Nº: ${osNumber}`, 195, y, { align: 'right' });
+    y += 6;
+    doc.text(`Data/Hora: ${format(new Date(dados.date || new Date()), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 195, y, { align: 'right' });
 
-    renderItem("Mão de Obra / Serviços", Number(dados.maoDeObra || dados.totalLabor || 0));
-    renderItem("Peças / Materiais", Number(dados.pecas || dados.totalParts || 0));
-    renderItem("Óleo / Lubrificantes", Number(dados.oleo || 0));
-
-    // Fallback item description if specified
-    if (dados.servico || dados.service) {
-      y += 2;
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      const serviceText = dados.servico || dados.service;
-      const splitText = doc.splitTextToSize("Detalhes: " + serviceText, 170);
-      doc.text(splitText, 15, y);
-      y += (splitText.length * 5) + 5;
-    }
-
-    y += 10;
-
-    // 🔹 LINHA FINAL
-    doc.setDrawColor(0, 255, 136);
-    doc.setLineWidth(0.5);
-    doc.line(15, y, 195, y);
     y += 12;
 
-    // 🔥 TOTAL EM DESTAQUE
-    doc.setFontSize(14);
-    doc.setFillColor(0, 255, 136);
-    doc.rect(120, y - 7, 75, 10, "F");
-
-    doc.setTextColor(0);
-    doc.setFontSize(12);
-    doc.text("TOTAL GERAL:  R$ " + subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 125, y);
-
-    doc.setTextColor(100);
+    // 3 & 4. DADOS DO CLIENTE E VEÍCULO
+    doc.setFillColor(245, 245, 245);
+    doc.rect(15, y, 180, 22, 'F');
+    
     doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DO CLIENTE", 20, y + 8);
+    doc.text("DADOS DO VEÍCULO", 110, y + 8);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 40, 40);
+    doc.text(`Nome: ${dados.clientName || '-'}`, 20, y + 14);
+    doc.text(`WhatsApp: ${dados.whatsapp || '-'}`, 20, y + 19);
+    
+    doc.text(`Veículo: ${dados.vehicle || '-'}`, 110, y + 14);
+    doc.text(`Placa: ${(dados.plate || '-').toUpperCase()}`, 110, y + 19);
+
+    y += 32;
+
+    // 5. TABELA PROFISSIONAL DE ITENS
+    const tableItems = (dados.items || []).map((item: any, index: number) => [
+      index + 1,
+      item.description,
+      item.type,
+      item.quantity,
+      `R$ ${fmt(item.unitValue)}`,
+      `R$ ${fmt(item.total)}`
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['ITEM', 'DESCRIÇÃO', 'TIPO', 'QTD', 'VALOR UNIT', 'TOTAL']],
+      body: tableItems,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 12 },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 30, halign: 'right' }
+      }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // 6. DETALHES DO SERVIÇO
+    if (dados.descriptionServico) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("OBSERVAÇÕES / DETALHES DO SERVIÇO:", 15, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      const splitDesc = doc.splitTextToSize(dados.descriptionServico, 180);
+      doc.text(splitDesc, 15, y);
+      y += (splitDesc.length * 5) + 10;
+    }
+
+    // 7. RESUMO FINANCEIRO
+    const summaryX = 130;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    
+    const drawRow = (label: string, value: number, isTotal = false) => {
+      doc.setFont("helvetica", isTotal ? "bold" : "normal");
+      doc.text(label, summaryX, y);
+      doc.text(`R$ ${fmt(value)}`, 195, y, { align: 'right' });
+      y += 6;
+    };
+
+    drawRow("Total em Serviços:", dados.totalLabor || 0);
+    drawRow("Total em Peças:", dados.totalParts || 0);
+    drawRow("Total em Óleo:", dados.totalOil || 0);
+    if (dados.discount > 0) {
+      doc.setTextColor(220, 0, 0);
+      drawRow("Desconto:", -dados.discount);
+      doc.setTextColor(100, 100, 100);
+    }
+
+    y += 2;
+    // Highlight Total Box
+    doc.setFillColor(0, 255, 136);
+    doc.rect(summaryX - 5, y - 5, 70, 10, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL FINAL:", summaryX, y + 2);
+    doc.text(`R$ ${fmt(dados.totalGeneral || 0)}`, 195, y + 2, { align: 'right' });
+
+    y += 15;
+
+    // 8. FORMA DE PAGAMENTO
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`FORMA DE PAGAMENTO: ${dados.paymentMethod || 'Não informado'}`, 15, y);
+
     y += 25;
 
-    // 🔹 RODAPÉ
-    doc.text("________________________________________________", 105, y, { align: "center" });
-    y += 8;
-    doc.text("Top Lubri - Palmital/SP - Telefone: (18) 99778-4303", 105, y, { align: "center" });
-    doc.text("Obrigado pela preferência!", 105, y + 6, { align: "center" });
+    // 9. RODAPÉ PROFISSIONAL
+    doc.setFontSize(8);
+    doc.text("Obrigado pela preferência!", 105, y, { align: 'center' });
+    y += 5;
+    doc.text("TOP LUBRI - (18) 99778-4303", 105, y, { align: 'center' });
+    
+    y += 15;
+    doc.setDrawColor(180, 180, 180);
+    doc.line(65, y, 145, y);
+    y += 5;
+    doc.text("Assinatura do Cliente", 105, y, { align: 'center' });
 
-    doc.save(`OS_${(dados.cliente || dados.clientName || "TopLubri").replace(/\s+/g, '_')}.pdf`);
+    doc.save(`OS_${(dados.clientName || "Cliente").replace(/\s+/g, '_')}.pdf`);
   };
 
   const shareOnWhatsApp = (dados: any) => {
-    const total =
-      (Number(dados.maoDeObra) || 0) +
-      (Number(dados.pecas) || 0) +
-      (Number(dados.oleo) || 0);
-
     const texto = 
-`🛠️ *ORÇAMENTO TOP LUBRI* 🛠️
+`🛠️ *ORDEM DE SERVIÇO - TOP LUBRI* 🛠️
 
-👤 *Cliente:* ${dados.cliente || dados.clientName}
-🔧 *Serviço:* ${dados.servico || dados.service}
-💰 *Total:* R$ ${total.toFixed(2)}
+👤 *Cliente:* ${dados.clientName}
+🚗 *Veículo:* ${dados.vehicle} (${dados.plate})
+💰 *Valor Total:* R$ ${dados.totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+✅ Seu orçamento/OS foi gerado com sucesso.
+Obrigado pela preferência!
 
 _Emitido via Top Lubri Palmital_`;
 
     const phone = (dados.whatsapp || '').replace(/\D/g, '');
-    const url = "https://wa.me/55" + phone + "?text=" + encodeURIComponent(texto);
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(texto)}`;
     window.open(url, "_blank");
   };
 
@@ -295,7 +388,10 @@ _Emitido via Top Lubri Palmital_`;
                       </div>
                       <div>
                         <h4 className="text-lg font-black tracking-tighter">{budget.clientName}</h4>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic">{budget.vehicle} • {budget.plate}</p>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic leading-tight">
+                          {budget.vehicle} • {budget.plate}<br/>
+                          {format(new Date(budget.date), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
                       </div>
                     </div>
                     <button 
@@ -306,14 +402,18 @@ _Emitido via Top Lubri Palmital_`;
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-3 gap-3 mb-6">
                     <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
-                      <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Mão de Obra</p>
-                      <p className="text-sm font-black text-white">R$ {budget.totalLabor.toLocaleString()}</p>
+                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Mão de Obra</p>
+                      <p className="text-xs font-black text-white">R$ {(budget.totalLabor || 0).toLocaleString('pt-BR')}</p>
                     </div>
                     <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
-                      <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças e Materiais</p>
-                      <p className="text-sm font-black text-white">R$ {budget.totalParts.toLocaleString()}</p>
+                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Peças</p>
+                      <p className="text-xs font-black text-white">R$ {(budget.totalParts || 0).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="p-3 bg-zinc-900/50 rounded-2xl border border-white/5">
+                      <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Óleo</p>
+                      <p className="text-xs font-black text-white">R$ {(budget.totalOil || 0).toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
 
@@ -357,12 +457,12 @@ _Emitido via Top Lubri Palmital_`;
             <PremiumCard className="p-6 space-y-4 border-primary/20 bg-zinc-900/50">
               <div className="flex items-center space-x-2 mb-2">
                 <User className="w-4 h-4 text-primary" />
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Dados do Cliente</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Dados do Cliente e Veículo</h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Nome</Label>
-                  <Input value={clientName} onChange={e => setClientName(e.target.value)} required className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Nome do Cliente</Label>
+                  <Input value={clientName} onChange={e => setClientName(e.target.value)} required placeholder="Ex: João Silva" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">WhatsApp</Label>
@@ -370,148 +470,174 @@ _Emitido via Top Lubri Palmital_`;
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Veículo</Label>
-                  <Input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Ex: Golf 2.0" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  <Input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Ex: Honda Civic 2020" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Placa</Label>
-                  <Input value={plate} onChange={e => setPlate(e.target.value)} placeholder="000-0000" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
+                  <Input value={plate} onChange={e => setPlate(e.target.value.toUpperCase())} placeholder="ABC-1234" className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" />
                 </div>
               </div>
             </PremiumCard>
 
-            {/* Mão de Obra Section */}
+            {/* Itens da OS Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <ClipboardList className="w-4 h-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Itens da Ordem de Serviço</h4>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={addItem}
+                  className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
+                >
+                  <Plus className="w-3 h-3 mr-2" /> Adicionar Item
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {items.map((item, idx) => (
+                  <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-white/5 space-y-4">
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-1.5">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Descrição do Item</Label>
+                        <Input 
+                          placeholder="Ex: Troca de Óleo 5W30" 
+                          value={item.description} 
+                          onChange={e => updateItem(idx, 'description', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                        />
+                      </div>
+                      <div className="w-24 space-y-1.5">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Tipo</Label>
+                        <select 
+                          value={item.type}
+                          onChange={e => updateItem(idx, 'type', e.target.value as any)}
+                          className="w-full h-10 bg-zinc-800/50 border border-zinc-700 rounded-xl px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="Serviço">Serviço</option>
+                          <option value="Peça">Peça</option>
+                          <option value="Óleo">Óleo</option>
+                        </select>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => removeItem(idx)}
+                        className="mt-6 p-2 text-red-500 hover:bg-red-500/10 rounded-lg h-10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Quantidade</Label>
+                        <Input 
+                          type="number"
+                          step="any"
+                          value={item.quantity} 
+                          onChange={e => updateItem(idx, 'quantity', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">V. Unitário (R$)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={item.unitValue} 
+                          onChange={e => updateItem(idx, 'unitValue', e.target.value)}
+                          className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[8px] uppercase font-bold text-zinc-500">Subtotal</Label>
+                        <div className="h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center px-4 font-black text-xs text-primary">
+                          R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Informações Adicionais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Wrench className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Mão de Obra</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Detalhes Técnicos</h4>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => setServices([...services, { description: '', value: '' }])}
-                  className="p-2 bg-primary/10 rounded-lg"
-                >
-                  <Plus className="w-4 h-4 text-primary" />
-                </button>
+                <textarea 
+                  value={descriptionServico}
+                  onChange={e => setDescriptionServico(e.target.value)}
+                  placeholder="Relatório técnico do serviço..."
+                  className="w-full h-32 bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
               </div>
-              {services.map((s, idx) => (
-                <div key={idx} className="flex gap-2 items-end">
-                  <div className="flex-[2] space-y-1.5">
-                    <Input 
-                      placeholder="Descrição do serviço" 
-                      value={s.description} 
-                      onChange={e => {
-                        const newS = [...services];
-                        newS[idx].description = e.target.value;
-                        setServices(newS);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1.5">
-                    <Input 
-                      type="number"
-                      placeholder="R$" 
-                      value={s.value} 
-                      onChange={e => {
-                        const newS = [...services];
-                        newS[idx].value = e.target.value;
-                        setServices(newS);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
-                    />
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setServices(services.filter((_, i) => i !== idx))}
-                    className="p-3 text-red-500"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Peças Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Package className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Peças</h4>
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Pagamento e Desconto</h4>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => setParts([...parts, { description: '', quantity: '', unitValue: '' }])}
-                  className="p-2 bg-primary/10 rounded-lg"
-                >
-                  <Plus className="w-4 h-4 text-primary" />
-                </button>
-              </div>
-              {parts.map((p, idx) => (
-                <div key={idx} className="space-y-2 p-4 bg-zinc-900/30 rounded-2xl border border-white/5">
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="Nome da peça" 
-                      value={p.description} 
-                      onChange={e => {
-                        const newP = [...parts];
-                        newP[idx].description = e.target.value;
-                        setParts(newP);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setParts(parts.filter((_, i) => i !== idx))}
-                      className="text-red-500"
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Forma de Pagamento</Label>
+                    <select 
+                      value={paymentMethod}
+                      onChange={e => setPaymentMethod(e.target.value as any)}
+                      className="w-full h-12 bg-zinc-800/50 border border-zinc-700 rounded-xl px-4 text-sm text-white"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <option value="Pix">Pix</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Cartão">Cartão</option>
+                    </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Desconto (R$)</Label>
                     <Input 
                       type="number"
-                      placeholder="Qtd" 
-                      value={p.quantity} 
-                      onChange={e => {
-                        const newP = [...parts];
-                        newP[idx].quantity = e.target.value;
-                        setParts(newP);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
+                      step="0.01"
+                      value={discount} 
+                      onChange={e => setDiscount(e.target.value)}
+                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
                     />
-                    <Input 
-                      type="number"
-                      placeholder="V. Unit R$" 
-                      value={p.unitValue} 
-                      onChange={e => {
-                        const newP = [...parts];
-                        newP[idx].unitValue = e.target.value;
-                        setParts(newP);
-                      }}
-                      className="bg-zinc-800/50 border-zinc-700 rounded-xl h-10" 
-                    />
-                  </div>
-                  <div className="text-right text-[10px] font-black text-zinc-500">
-                    Subtotal: R$ {((parseFloat(p.quantity) || 0) * (parseFloat(p.unitValue) || 0)).toLocaleString()}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
 
-            {/* Total Geral Footer */}
+            {/* Resumo e Botão Flutuante */}
             <div className="sticky bottom-4 left-0 right-0 z-40">
-              <PremiumCard className="p-6 bg-primary shadow-[0_-10px_40px_rgba(0,255,136,0.3)] border-none">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="text-black font-black uppercase tracking-tighter italic">Total Geral</div>
-                  <div className="text-3xl font-black text-black tracking-tighter">
+              <PremiumCard className="p-6 bg-zinc-900 border-primary/30 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="space-y-1">
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Subtotal Bruto</p>
+                    <p className="text-sm font-bold text-zinc-300">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Valor do Desconto</p>
+                    <p className="text-sm font-bold text-red-400">- R$ {(parseFloat(discount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center mb-6 py-4 border-y border-white/5">
+                  <div className="text-white font-black uppercase tracking-tighter italic">Total OS</div>
+                  <div className="text-3xl font-black text-primary tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,136,0.3)]">
                     R$ {totalGeneral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
+                
                 <div className="flex gap-3">
-                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="flex-1 bg-black text-white border-black h-12">Cancelar</PremiumButton>
-                  <PremiumButton type="submit" disabled={isSaving} className="flex-[2] bg-black text-primary border-black h-12">
-                    {isSaving ? 'Salvando...' : 'Salvar Orçamento'}
+                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl border-zinc-700 text-zinc-400 group">
+                    <ChevronDown className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform" />
+                    Sair
+                  </PremiumButton>
+                  <PremiumButton type="submit" disabled={isSaving} className="flex-[2] h-14 rounded-2xl shadow-[0_0_20px_rgba(0,255,136,0.2)]">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    {isSaving ? 'Gravando Dados...' : 'Gerar Ordem de Serviço'}
                   </PremiumButton>
                 </div>
               </PremiumCard>
