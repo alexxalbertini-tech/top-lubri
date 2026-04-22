@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, closeKeyboard } from '@/lib/utils';
 import { Appointment } from '@/types';
 
 export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
@@ -31,6 +31,7 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
     if (isSaving) return;
     
     setIsSaving(true);
+    closeKeyboard();
     try {
       const labor = parseFloat(laborValue) || 0;
       const parts = parseFloat(partsValue) || 0;
@@ -51,20 +52,11 @@ export function Appointments({ setActiveTab }: { setActiveTab?: (tab: string) =>
       });
 
       // 2. Success Feedback
-      alert('Agendamento confirmado com sucesso!');
+      toast.success('Agendamento confirmado com sucesso!');
       
-      // 3. Reset and Close flow (PROFESSIONAL)
+      // 3. Reset and Close flow
       resetForm();
       setIsAdding(false);
-      
-      // 4. Update Tab (State based navigation)
-      if (setActiveTab) setActiveTab('dashboard');
-
-      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-
     } catch (error) {
       console.error('ERRO AO AGENDAR:', error);
       toast.error('Erro ao realizar agendamento. Verifique sua conexão.');

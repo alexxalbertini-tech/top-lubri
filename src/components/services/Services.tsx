@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'motion/react';
+import { closeKeyboard } from '@/lib/utils';
 
 export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { services, addService, deleteItem } = useFirebase();
@@ -28,6 +29,7 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     if (isSaving) return;
     
     setIsSaving(true);
+    closeKeyboard();
     try {
       const labor = parseFloat(laborValue) || 0;
       const parts = parseFloat(partsValue) || 0;
@@ -55,20 +57,11 @@ export function Services({ setActiveTab }: { setActiveTab?: (tab: string) => voi
       });
 
       // 2. Success Feedback
-      alert('Salvo com Sucesso!');
+      toast.success('Serviço salvo com sucesso!');
       
-      // 3. Reset and Close flow (PROFESSIONAL)
+      // 3. Reset and Close flow
       resetForm();
       setIsAdding(false);
-      
-      // 4. Update Tab (State based navigation)
-      if (setActiveTab) setActiveTab('dashboard');
-
-      // 5. Final fallback: Forced reload/navigation as requested by user (HARD TEST)
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-
     } catch (error) {
       console.error('ERRO AO SALVAR SERVIÇO:', error);
       toast.error('Erro ao registrar serviço. Verifique sua conexão.');

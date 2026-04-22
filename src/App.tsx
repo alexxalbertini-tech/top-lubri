@@ -17,11 +17,45 @@ import { Receipts } from './components/receipts/Receipts';
 import { Budgets } from './components/budget/Budgets';
 import { Toaster } from './components/ui/sonner';
 import { AnimatePresence, motion } from 'motion/react';
+import { handleEnterToNext } from './lib/utils';
 
 export default function App() {
   const { user, profile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const root = document.getElementById("root");
+      if (root) {
+        root.style.height = window.innerHeight + "px";
+      }
+    };
+    
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial call
+    
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleEnterToNext);
+    
+    // Auto-scroll para campos quando focados no mobile
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) {
+        setTimeout(() => {
+          (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    };
+    window.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      window.removeEventListener("keydown", handleEnterToNext);
+      window.removeEventListener("focusin", handleFocusIn);
+    };
+  }, []);
 
   useEffect(() => {
     // Splash screen stays for 1.5s or until loading completes, whichever is longer

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { closeKeyboard } from '@/lib/utils';
 import { BudgetItem, Budget, LaborItem, PartItem } from '@/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -118,6 +119,7 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     }
 
     setIsSaving(true);
+    closeKeyboard();
     try {
       const budgetData = {
         clientName,
@@ -144,11 +146,10 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
       };
 
       await addBudget(budgetData);
-      alert('Orçamento salvo com sucesso!');
+      toast.success('Orçamento salvo com sucesso!');
       resetForm();
       setIsAdding(false);
-      if (setActiveTab) setActiveTab('dashboard');
-      setTimeout(() => { window.location.href = "/"; }, 500);
+      // Mantém na tela atual (Central de Orçamentos) sem recarregar a página inteira
     } catch (error) {
       console.error('ERRO AO SALVAR ORÇAMENTO:', error);
       toast.error('Erro ao salvar orçamento.');

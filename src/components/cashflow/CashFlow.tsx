@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/lib/utils';
+import { cn, closeKeyboard } from '@/lib/utils';
 
 export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const { cashFlow, addCashFlowEntry, deleteItem } = useFirebase();
@@ -39,6 +39,7 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
     }
 
     setIsSaving(true);
+    closeKeyboard();
     try {
       // 1. Await database operation fully
       await addCashFlowEntry({
@@ -50,20 +51,11 @@ export function CashFlow({ setActiveTab }: { setActiveTab?: (tab: string) => voi
       });
 
       // 2. Success Feedback
-      alert(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
+      toast.success(`${entryType === 'entry' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
 
-      // 3. Reset and Close flow (PROFESSIONAL)
+      // 3. Reset and Close flow
       resetForm();
       setIsAdding(false);
-      
-      // 4. Update Tab
-      if (setActiveTab) setActiveTab('dashboard');
-
-      // 5. Final fallback: Forced reload/navigation as requested (HARD TEST)
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-
     } catch (error) {
       console.error('ERRO AO REGISTRAR CAIXA:', error);
       toast.error('Erro ao registrar fluxo de caixa. Verifique sua conexão.');
