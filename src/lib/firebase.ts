@@ -12,8 +12,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Force persistence
-setPersistence(auth, browserLocalPersistence).catch(console.error);
+// Persistence is handled dynamically in AuthScreen.tsx
+// setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export { app, auth, db, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, collection, addDoc, getDocs, query, where };
 

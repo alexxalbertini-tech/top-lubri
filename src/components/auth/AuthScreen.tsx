@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { PremiumButton, PremiumCard } from '../ui/PremiumUI';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { motion } from 'motion/react';
-import { LogIn, Loader2, ShieldCheck, UserPlus, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { LogIn, Loader2, ShieldCheck, UserPlus, Mail, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AuthScreen() {
@@ -14,6 +14,14 @@ export function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('toplubri_remembered_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
 
   const ensureProfile = async (uid: string, userEmail: string | null) => {
     const userRef = doc(db, 'usuarios', uid);
@@ -35,9 +43,18 @@ export function AuthScreen() {
     
     setIsLoggingIn(true);
     try {
+      // Define persistência com base no checkbox
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      
       const result = await signInWithEmailAndPassword(auth, email, password);
       await ensureProfile(result.user.uid, result.user.email);
-      // alert('Login realizado com sucesso!'); // User requested alert for success feedback in logic
+      
+      if (rememberMe) {
+        localStorage.setItem('toplubri_remembered_email', email);
+      } else {
+        localStorage.removeItem('toplubri_remembered_email');
+      }
+
       window.location.href = "/";
     } catch (error: any) {
       console.error('ERRO LOGIN:', error.code);
@@ -143,15 +160,28 @@ export function AuthScreen() {
               />
               <button 
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPassword(!showPassword);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors z-30 p-1 rounded-md hover:bg-white/5"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between py-1">
+            <label className="flex items-center space-x-2 cursor-pointer group">
+              <div 
+                onClick={() => setRememberMe(!rememberMe)}
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${rememberMe ? 'bg-primary border-primary' : 'border-zinc-700 bg-zinc-800/50 group-hover:border-zinc-500'}`}
+              >
+                {rememberMe && <CheckCircle className="w-3 h-3 text-black font-bold" />}
+              </div>
+              <span className="text-[9px] uppercase font-black tracking-widest text-zinc-500 group-hover:text-zinc-400">Manter conectado</span>
+            </label>
+
             <button 
               type="button"
               onClick={handleForgotPassword}
