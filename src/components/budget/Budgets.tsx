@@ -184,8 +184,8 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
-    doc.text("Palmital - SP | (18) 99778-4303", 195, 25, { align: 'right' });
-    doc.text("Oficina de Alta Performance", 195, 32, { align: 'right' });
+    doc.text("Palmital - SP | CNPJ: 48.806.264/0001-63", 195, 25, { align: 'right' });
+    doc.text("Tel: (18) 99680-2877", 195, 32, { align: 'right' });
 
     // 2. INFORMAÇÕES DO DOCUMENTO
     let y = 50;
@@ -308,9 +308,9 @@ export function Budgets({ setActiveTab }: { setActiveTab?: (tab: string) => void
     doc.setFontSize(8);
     doc.text("Top Lubri - Oficina Automotiva", 105, y, { align: 'center' });
     y += 5;
-    doc.text("Palmital-SP | Contato: (18) 99778-4303", 105, y, { align: 'center' });
+    doc.text("CNPJ: 48.806.264/0001-63 | Tel: (18) 99680-2877", 105, y, { align: 'center' });
     y += 5;
-    doc.text("Obrigado pela preferência!", 105, y, { align: 'center' });
+    doc.text("Palmital - SP | Obrigado pela preferência!", 105, y, { align: 'center' });
 
     doc.save(`OS_TOPLUBRI_${dados.clientName?.replace(/\s+/g, '_')}.pdf`);
   };
