@@ -460,69 +460,19 @@ _Emitido via Top Lubri Palmital_`;
               </div>
             </PremiumCard>
 
-            {/* 1. MÃO DE OBRA */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Wrench className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">1. Mão de Obra / Serviços</h4>
-                </div>
-                <button 
-                  type="button" 
-                  onClick={addLaborItem}
-                  className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
-                >
-                  <Plus className="w-3 h-3 mr-2" /> Outra Mão de Obra
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                {laborItems.map((item, idx) => (
-                  <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-white/5 flex items-end gap-3">
-                    <div className="flex-1 space-y-1.5">
-                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Descrição do Serviço</Label>
-                      <Input 
-                        placeholder="Ex: Troca de Buchas" 
-                        value={item.descricao} 
-                        onChange={e => updateLaborItem(idx, 'descricao', e.target.value)}
-                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
-                      />
-                    </div>
-                    <div className="w-32 space-y-1.5">
-                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Valor (R$)</Label>
-                      <Input 
-                        type="number"
-                        step="0.01"
-                        value={item.valor} 
-                        onChange={e => updateLaborItem(idx, 'valor', e.target.value)}
-                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
-                      />
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => removeLaborItem(idx)}
-                      className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. PEÇAS */}
+            {/* 1. PEÇAS */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Package className="w-4 h-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">2. Peças e Materiais</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">1. Peças e Materiais</h4>
                 </div>
                 <button 
                   type="button" 
                   onClick={addPartItem}
                   className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
                 >
-                  <Plus className="w-3 h-3 mr-2" /> Outra Peça
+                  <Plus className="w-3 h-3 mr-2" /> Adicionar Peça
                 </button>
               </div>
               
@@ -581,6 +531,56 @@ _Emitido via Top Lubri Palmital_`;
               </div>
             </div>
 
+            {/* 2. MÃO DE OBRA */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Wrench className="w-4 h-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">2. Mão de Obra / Serviços</h4>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={addLaborItem}
+                  className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center"
+                >
+                  <Plus className="w-3 h-3 mr-2" /> Adicionar Mão de Obra
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {laborItems.map((item, idx) => (
+                  <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-white/5 flex items-end gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Descrição do Serviço</Label>
+                      <Input 
+                        placeholder="Ex: Troca de Buchas" 
+                        value={item.descricao} 
+                        onChange={e => updateLaborItem(idx, 'descricao', e.target.value)}
+                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+                      />
+                    </div>
+                    <div className="w-32 space-y-1.5">
+                      <Label className="text-[8px] uppercase font-bold text-zinc-500">Valor (R$)</Label>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        value={item.valor} 
+                        onChange={e => updateLaborItem(idx, 'valor', e.target.value)}
+                        className="bg-zinc-800/50 border-zinc-700 rounded-xl h-12" 
+                      />
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => removeLaborItem(idx)}
+                      className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Informações Adicionais */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -628,9 +628,9 @@ _Emitido via Top Lubri Palmital_`;
               </div>
             </div>
 
-            {/* Resumo e Botão Flutuante */}
-            <div className="sticky bottom-4 left-0 right-0 z-40">
-              <PremiumCard className="p-6 bg-zinc-900 border-primary/30 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            {/* Resumo e Botão de Ação no Final */}
+            <div className="pt-6">
+              <PremiumCard className="p-6 bg-zinc-900 border-primary/30 mb-10">
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="space-y-1">
                     <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Subtotal Bruto</p>
@@ -649,12 +649,12 @@ _Emitido via Top Lubri Palmital_`;
                   </div>
                 </div>
                 
-                <div className="flex gap-3">
-                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl border-zinc-700 text-zinc-400 group">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <PremiumButton type="button" variant="outline" onClick={() => setIsAdding(false)} disabled={isSaving} className="h-14 rounded-2xl border-zinc-700 text-zinc-400 group order-2 sm:order-1">
                     <ChevronDown className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform" />
                     Sair
                   </PremiumButton>
-                  <PremiumButton type="submit" disabled={isSaving} className="flex-[2] h-14 rounded-2xl shadow-[0_0_20px_rgba(0,255,136,0.2)]">
+                  <PremiumButton type="submit" disabled={isSaving} className="h-14 rounded-2xl shadow-[0_0_20px_rgba(0,255,136,0.2)] flex-[2] order-1 sm:order-2">
                     <CheckCircle2 className="w-5 h-5 mr-2" />
                     {isSaving ? 'Gravando Dados...' : 'Gerar Ordem de Serviço'}
                   </PremiumButton>
