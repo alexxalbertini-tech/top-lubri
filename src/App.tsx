@@ -74,19 +74,24 @@ export default function App() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative"
         >
-          <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(0,255,136,0.4)] animate-pulse">
-            <span className="text-black font-black text-4xl italic">T</span>
+          <div className="w-24 h-24 bg-[#000000] rounded-[2rem] flex items-center justify-center shadow-[0_0_50px_rgba(0,255,136,0.3)] border border-primary/20 overflow-hidden relative">
+            <div className="absolute inset-y-0 left-0 w-1/2 bg-black" />
+            <div className="absolute inset-y-0 right-0 w-1/2 bg-[#00ff88]" />
+            <span className="relative z-10 text-white font-black text-5xl italic mix-blend-difference">TL</span>
           </div>
-          <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full -z-10" />
+          <div className="absolute -inset-8 bg-primary/10 blur-3xl rounded-full -z-10 animate-pulse" />
         </motion.div>
-        <motion.h1 
+        <motion.div 
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-8 text-2xl font-black tracking-tighter uppercase italic text-primary"
+          className="mt-12 text-center"
         >
-          Top Lubri <span className="text-white">Palmital</span>
-        </motion.h1>
+          <h1 className="text-3xl font-black tracking-tighter uppercase italic text-white flex items-center justify-center">
+            TOP<span className="text-primary ml-1">LUBRI</span>
+          </h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mt-2">Gestão Premium de Oficina</p>
+        </motion.div>
       </div>
     );
   }
